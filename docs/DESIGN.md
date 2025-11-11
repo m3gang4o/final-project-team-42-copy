@@ -60,7 +60,7 @@
 
 ## Backend Database Schema
 
-*Replace this with a photo or PDF link of your backend database schema. Please add a short description for important design considerations.
+<img width="1206" height="767" alt="image" src="https://github.com/user-attachments/assets/cc324525-2ea1-43fd-98b7-fa1eeb18e601" />
 
 ## High-Fidelity Prototype
 
