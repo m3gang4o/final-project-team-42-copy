@@ -54,6 +54,7 @@ export default async function handler(
       });
 
     if (error) {
+      console.error("Supabase storage error:", error);
       return res.status(500).json({ error: error.message });
     }
 
@@ -62,8 +63,8 @@ export default async function handler(
     } = supabase.storage.from("group-files").getPublicUrl(filePath);
 
     return res.status(200).json({ url: publicUrl, path: data.path });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Upload error:", error);
-    return res.status(500).json({ error: "Upload failed" });
+    return res.status(500).json({ error: error.message || "Upload failed" });
   }
 }
