@@ -390,7 +390,11 @@ export default function DashboardPage() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {filteredStudyGroups.map((group) => (
-                <Card key={group.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                <Card 
+                  key={group.id} 
+                  className="hover:shadow-lg transition-shadow cursor-pointer"
+                  onClick={() => router.push(`/groups/${group.id}`)}
+                >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
                       {group.imageUrl ? (
