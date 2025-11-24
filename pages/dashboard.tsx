@@ -108,7 +108,7 @@ export default function DashboardPage() {
       <aside className="fixed left-0 top-0 h-screen flex flex-col transition-all duration-300 z-50">
         <Collapsible
           open={!isSidebarCollapsed}
-          onOpenChange={(open) => setIsSidebarCollapsed(!open)}
+          onOpenChange={(open: boolean) => setIsSidebarCollapsed(!open)}
           className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col`}
         >
           {/* Collapse Trigger */}
