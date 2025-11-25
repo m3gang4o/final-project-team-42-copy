@@ -4,7 +4,7 @@ import {
   FileText, Upload, File, Image as ImageIcon, X, Clock, Search, 
   Plus, Share2, Download, Trash2, MoreVertical, Grid, List,
   Folder, Star, Home, Users, Settings, Book, MessageSquare,
-  Filter, SortAsc, Eye
+  Filter, SortAsc, Eye, Sparkles
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
