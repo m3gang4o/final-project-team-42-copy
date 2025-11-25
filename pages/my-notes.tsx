@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
-import { Book, FileText, Upload, File, Image as ImageIcon, X, Clock, Search, Plus, Share2 } from "lucide-react";
+import { Book, FileText, Upload, File, Image as ImageIcon, X, Clock, Search, Plus, Share2, Users, Sparkles, MessageSquare, Settings, Home } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -166,10 +166,22 @@ export default function MyNotesPage() {
           </div>
         </div>
         <nav className="flex-1 p-4">
-          <ul className="space-y-1">
-            <li><button onClick={() => router.push("/dashboard")} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"><Book className="h-5 w-5" /><span>Dashboard</span></button></li>
-            <li><button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-blue-600 font-medium"><FileText className="h-5 w-5" /><span>My Notes</span></button></li>
-          </ul>
+          <div className="mb-6">
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Menu</p>
+            <ul className="space-y-1">
+              <li><button onClick={() => router.push("/dashboard")} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"><Home className="h-5 w-5" /><span>Dashboard</span></button></li>
+              <li><button onClick={() => router.push("/study-groups")} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"><Users className="h-5 w-5" /><span>Study Groups</span></button></li>
+              <li><button onClick={() => router.push("/ai-assistant")} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"><Sparkles className="h-5 w-5" /><span>AI Assistant</span></button></li>
+              <li><button onClick={() => router.push("/group-chat")} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"><MessageSquare className="h-5 w-5" /><span>Group Chat</span></button></li>
+              <li><button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-blue-400 font-medium"><FileText className="h-5 w-5" /><span>My Notes</span></button></li>
+            </ul>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Account</p>
+            <ul className="space-y-1">
+              <li><button onClick={() => router.push("/settings")} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"><Settings className="h-5 w-5" /><span>Settings</span></button></li>
+            </ul>
+          </div>
         </nav>
       </aside>
 
