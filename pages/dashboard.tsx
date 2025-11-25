@@ -30,10 +30,27 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [studyGroups, setStudyGroups] = useState<StudyGroup[]>(initialStudyGroups);
   const [loading, setLoading] = useState(true);
+  const [userName, setUserName] = useState("User");
+  const [userEmail, setUserEmail] = useState("");
 
   useEffect(() => {
     fetchGroups();
+    fetchUser();
   }, []);
+
+  const fetchUser = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Try to get name from user metadata or email
+        const name = user.user_metadata?.name || user.email?.split('@')[0] || "User";
+        setUserName(name);
+        setUserEmail(user.email || "");
+      }
+    } catch (error) {
+      console.error("Error fetching user:", error);
+    }
+  };
 
   const fetchGroups = async () => {
     try {
@@ -283,14 +300,16 @@ export default function DashboardPage() {
             <div className="mt-auto p-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">OC</span>
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    {userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                  </span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                    Oscar Cheung
+                    {userName}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    ocheung@unc.edu
+                    {userEmail}
                   </p>
                 </div>
               </div>
@@ -304,7 +323,7 @@ export default function DashboardPage() {
         {/* Welcome Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Welcome, Oscar!
+            Welcome, {userName}!
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
             Here&apos;s what&apos;s happening with your study groups today.
