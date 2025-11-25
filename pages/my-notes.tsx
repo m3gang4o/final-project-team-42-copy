@@ -131,7 +131,13 @@ export default function MyNotesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ file: base64, fileName, contentType: file.type }),
       });
-      if (!response.ok) throw new Error("Upload failed");
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        console.error("Upload failed:", errorData);
+        throw new Error(errorData.error || "Upload failed");
+      }
+      
       const { url } = await response.json();
       return url;
     } catch (error) {
