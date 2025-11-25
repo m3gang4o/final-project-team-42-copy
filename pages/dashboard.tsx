@@ -294,12 +294,12 @@ export default function DashboardPage() {
   }, [searchQuery, studyGroups]);
 
   return (
-    <div className="min-h-screen flex bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex bg-gray-50">
       <aside className="fixed left-0 top-0 h-screen flex flex-col transition-all duration-300 z-50">
         <Collapsible
           open={!isSidebarCollapsed}
           onOpenChange={(open: boolean) => setIsSidebarCollapsed(!open)}
-          className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col`}
+          className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} h-full bg-white border-r border-gray-200 flex flex-col`}
         >
           {/* Collapse Trigger */}
           <div className="absolute right-4 top-6 z-10">
@@ -307,7 +307,7 @@ export default function DashboardPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 p-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                className="h-8 w-8 p-0 bg-white border border-gray-200"
                 title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 {isSidebarCollapsed ? (
@@ -323,26 +323,26 @@ export default function DashboardPage() {
           <CollapsibleContent className="flex-1 flex flex-col h-full">
             <div>
               {/* Logo */}
-              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-[#4B9CD3] rounded flex items-center justify-center flex-shrink-0">
                     <Book className="h-5 w-5 text-white" />
                   </div>
-                  <span className="text-xl font-bold text-[#13294B] dark:text-white whitespace-nowrap">StudyBuddy</span>
+                  <span className="text-xl font-bold text-[#13294B] whitespace-nowrap">StudyBuddy</span>
                 </div>
               </div>
 
               {/* Menu */}
               <nav className="p-4 space-y-6">
                 <div>
-                  <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
                     Menu
                   </h3>
                   <ul className="space-y-1">
                     <li>
                       <button
                         onClick={() => router.push("/dashboard")}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-medium"
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-100 text-gray-900 font-medium"
                         title="Dashboard"
                       >
                         <Home className="h-5 w-5 flex-shrink-0" />
@@ -352,7 +352,7 @@ export default function DashboardPage() {
                     <li>
                       <button
                         onClick={() => router.push("/study-groups")}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
                         title="Study Groups"
                       >
                         <Users className="h-5 w-5 flex-shrink-0" />
@@ -362,7 +362,7 @@ export default function DashboardPage() {
                     <li>
                       <button
                         onClick={() => router.push("/ai-assistant")}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
                         title="AI Assistant"
                       >
                         <Sparkles className="h-5 w-5 flex-shrink-0" />
@@ -372,7 +372,7 @@ export default function DashboardPage() {
                     <li>
                       <button
                         onClick={() => router.push("/group-chat")}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
                         title="Group Chat"
                       >
                         <MessageSquare className="h-5 w-5 flex-shrink-0" />
@@ -382,7 +382,7 @@ export default function DashboardPage() {
                     <li>
                       <button
                         onClick={() => router.push("/my-notes")}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
                         title="My Notes"
                       >
                         <FileText className="h-5 w-5 flex-shrink-0" />
@@ -394,14 +394,14 @@ export default function DashboardPage() {
 
                 {/* Account */}
                 <div>
-                  <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
                     Account
                   </h3>
                   <ul className="space-y-1">
                     <li>
                       <button
                         onClick={() => router.push("/settings")}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
                         title="Settings"
                       >
                         <Settings className="h-5 w-5 flex-shrink-0" />
@@ -413,18 +413,18 @@ export default function DashboardPage() {
               </nav>
             </div>
 
-            <div className="mt-auto p-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="mt-auto p-4 border-t border-gray-200">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-semibold text-gray-700">
                     {userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  <p className="text-sm font-medium text-gray-900 truncate">
                     {userName}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  <p className="text-xs text-gray-500 truncate">
                     {userEmail}
                   </p>
                 </div>
@@ -438,10 +438,10 @@ export default function DashboardPage() {
       <main className={`flex-1 overflow-y-auto p-8 transition-all duration-300 ${isSidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
         {/* Welcome Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Welcome, {userName}!
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-gray-600">
             Here&apos;s what&apos;s happening with your study groups today.
           </p>
         </div>
@@ -450,8 +450,8 @@ export default function DashboardPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Study Groups</h2>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
+              <h2 className="text-2xl font-bold text-gray-900">Study Groups</h2>
+              <p className="text-gray-600 mt-1">
                 Join course-specific groups to collaborate with classmates
               </p>
             </div>
@@ -466,7 +466,7 @@ export default function DashboardPage() {
               <Button
                 onClick={() => setIsJoinGroupOpen(true)}
                 variant="outline"
-                className="border-gray-300 dark:border-gray-600"
+                className="border-gray-300"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Join Group
@@ -480,13 +480,13 @@ export default function DashboardPage() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                    <p className="text-sm font-medium text-gray-600 mb-2">
                       Total Groups
                     </p>
-                    <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-3xl font-bold text-gray-900">
                       {studyGroups.length}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       {studyGroups.length === 0 ? 'Create your first group' : 'Across all courses'}
                     </p>
                   </div>
@@ -499,13 +499,13 @@ export default function DashboardPage() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                    <p className="text-sm font-medium text-gray-600 mb-2">
                       Total Members
                     </p>
-                    <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-3xl font-bold text-gray-900">
                       {studyGroups.reduce((sum, group) => sum + group.members, 0)}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       {studyGroups.length > 0 ? 'In your groups' : 'Join a group to get started'}
                     </p>
                   </div>
@@ -518,13 +518,13 @@ export default function DashboardPage() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                    <p className="text-sm font-medium text-gray-600 mb-2">
                       Resources Shared
                     </p>
-                    <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-3xl font-bold text-gray-900">
                       {studyGroups.reduce((sum, group) => sum + group.resources, 0)}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       {studyGroups.length > 0 ? 'Notes, PDFs, and more' : 'No resources yet'}
                     </p>
                   </div>
@@ -537,13 +537,13 @@ export default function DashboardPage() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                    <p className="text-sm font-medium text-gray-600 mb-2">
                       Study Streak
                     </p>
-                    <p className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-1">
+                    <p className="text-3xl font-bold text-gray-900 flex items-center gap-1">
                       {studyStreak} day{studyStreak !== 1 ? 's' : ''} {studyStreak > 0 && <Flame className="h-5 w-5 text-orange-500" />}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       {studyStreak === 0 ? 'Start your streak today!' : studyStreak < 3 ? 'Keep it up!' : studyStreak < 7 ? 'Great job!' : 'Amazing streak!'}
                     </p>
                   </div>
@@ -576,7 +576,7 @@ export default function DashboardPage() {
             {/* My Groups Tab */}
             <TabsContent value="my-groups" className="mt-6">
               {filteredStudyGroups.length === 0 ? (
-                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                <div className="text-center py-12 text-gray-500">
                   <p>Create your first study group!</p>
                 </div>
               ) : (
@@ -590,7 +590,7 @@ export default function DashboardPage() {
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
                       {group.imageUrl ? (
-                          <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden border border-gray-200 dark:border-gray-700">
+                          <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden border border-gray-200">
                             <img
                               src={group.imageUrl}
                               alt={group.name}
@@ -605,16 +605,16 @@ export default function DashboardPage() {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-1">
                             {group.name}
                           </h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                          <p className="text-sm text-gray-600 mb-1">
                             {group.description}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">
+                          <p className="text-xs text-gray-500 mb-3">
                             Group ID: {group.id}
                           </p>
-                          <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                          <div className="flex items-center gap-4 text-sm text-gray-600">
                             <div className="flex items-center gap-1">
                               <Users className="h-4 w-4" />
                               <span>{group.members} members</span>
@@ -624,7 +624,7 @@ export default function DashboardPage() {
                               <span>{group.resources} resources</span>
                             </div>
                           </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-3">
+                          <p className="text-xs text-gray-500 mt-3">
                             Last activity: {group.lastActivity}
                           </p>
                         </div>
@@ -638,14 +638,14 @@ export default function DashboardPage() {
 
             {/* Discover Tab */}
             <TabsContent value="discover" className="mt-6">
-              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <div className="text-center py-12 text-gray-500">
                 <p>Discover new study groups coming soon...</p>
               </div>
             </TabsContent>
 
             {/* Recent Activity Tab */}
             <TabsContent value="recent-activity" className="mt-6">
-              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <div className="text-center py-12 text-gray-500">
                 <p>Recent activity coming soon...</p>
               </div>
             </TabsContent>
@@ -705,7 +705,7 @@ export default function DashboardPage() {
                   <img
                     src={groupImagePreview}
                     alt="Group preview"
-                    className="w-24 h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+                    className="w-24 h-24 object-cover rounded-lg border border-gray-200"
                   />
                 </div>
               )}

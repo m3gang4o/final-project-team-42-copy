@@ -48,11 +48,11 @@ export default function LoginPage() {
             <span className="text-3xl font-bold text-[#13294B]">StudyBuddy</span>
           </div>
           
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+          <h2 className="text-2xl font-semibold text-gray-900">
             Study Smarter, Together
           </h2>
           
-          <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-base">
+          <p className="text-gray-700 leading-relaxed text-base">
             Join UNC students in creating collaborative study groups, sharing resources, and using AI-powered tools to ace your classes.
           </p>
           
@@ -63,8 +63,8 @@ export default function LoginPage() {
                 <Users className="h-6 w-6 text-[#13294B]" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Course-Specific Groups</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Connect with classmates in your courses</p>
+                <h3 className="font-semibold text-gray-900 mb-1">Course-Specific Groups</h3>
+                <p className="text-sm text-gray-600">Connect with classmates in your courses</p>
               </div>
             </div>
             
@@ -73,8 +73,8 @@ export default function LoginPage() {
                 <GraduationCap className="h-6 w-6 text-[#13294B]" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">AI Study Assistant</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Summarize notes and generate quiz questions</p>
+                <h3 className="font-semibold text-gray-900 mb-1">AI Study Assistant</h3>
+                <p className="text-sm text-gray-600">Summarize notes and generate quiz questions</p>
               </div>
             </div>
             
@@ -83,8 +83,8 @@ export default function LoginPage() {
                 <MessageSquare className="h-6 w-6 text-[#13294B]" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Real-Time Chat</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Discuss and collaborate with your study groups</p>
+                <h3 className="font-semibold text-gray-900 mb-1">Real-Time Chat</h3>
+                <p className="text-sm text-gray-600">Discuss and collaborate with your study groups</p>
               </div>
             </div>
           </div>
