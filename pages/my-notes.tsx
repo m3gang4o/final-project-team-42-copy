@@ -55,7 +55,6 @@ export default function MyNotesPage() {
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [filterType, setFilterType] = useState<FilterType>('all');
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
@@ -259,48 +258,98 @@ export default function MyNotesPage() {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
-      <div className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-gray-200 flex flex-col transition-all duration-300`}>
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Book className="h-5 w-5 text-white" />
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
+        <div className="flex-shrink-0">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-[#4B9CD3] to-[#13294B] rounded-xl flex items-center justify-center shadow-lg">
+                <Book className="h-6 w-6 text-white" />
+              </div>
+              <span className="text-xl font-bold text-[#13294B] whitespace-nowrap">StudyBuddy</span>
             </div>
-            {!isSidebarCollapsed && <span className="font-bold text-lg">StudyBuddy</span>}
           </div>
-        </div>
 
-        <nav className="flex-1 p-4 space-y-1">
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700"
-          >
-            <Home className="h-5 w-5" />
-            {!isSidebarCollapsed && <span>Dashboard</span>}
-          </button>
-          <button
-            onClick={() => router.push("/my-notes")}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-          >
-            <FileText className="h-5 w-5" />
-            {!isSidebarCollapsed && <span>My Documents</span>}
-          </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700">
-            <Users className="h-5 w-5" />
-            {!isSidebarCollapsed && <span>Study Groups</span>}
-          </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700">
-            <MessageSquare className="h-5 w-5" />
-            {!isSidebarCollapsed && <span>Group Chat</span>}
-          </button>
-        </nav>
+          {/* Menu */}
+          <nav className="p-4 space-y-6">
+            <div>
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                Menu
+              </h3>
+              <ul className="space-y-1">
+                <li>
+                  <button
+                    onClick={() => router.push("/dashboard")}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                    title="Dashboard"
+                  >
+                    <Home className="h-5 w-5 flex-shrink-0" />
+                    <span>Dashboard</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => router.push("/study-groups")}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                    title="Study Groups"
+                  >
+                    <Users className="h-5 w-5 flex-shrink-0" />
+                    <span>Study Groups</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => router.push("/ai-assistant")}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                    title="AI Assistant"
+                  >
+                    <Sparkles className="h-5 w-5 flex-shrink-0" />
+                    <span>AI Assistant</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => router.push("/group-chat")}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                    title="Group Chat"
+                  >
+                    <MessageSquare className="h-5 w-5 flex-shrink-0" />
+                    <span>Group Chat</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => router.push("/my-notes")}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-100 text-gray-900 font-medium"
+                    title="My Notes"
+                  >
+                    <FileText className="h-5 w-5 flex-shrink-0" />
+                    <span>My Notes</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
 
-        <div className="p-4 border-t border-gray-200">
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700">
-            <Settings className="h-5 w-5" />
-            {!isSidebarCollapsed && <span>Settings</span>}
-          </button>
+            {/* Account */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                Account
+              </h3>
+              <ul className="space-y-1">
+                <li>
+                  <button
+                    onClick={() => router.push("/settings")}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                    title="Settings"
+                  >
+                    <Settings className="h-5 w-5 flex-shrink-0" />
+                    <span>Settings</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </nav>
         </div>
-      </div>
+      </aside>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
