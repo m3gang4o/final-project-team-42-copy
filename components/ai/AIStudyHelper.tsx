@@ -280,20 +280,14 @@ export default function AIStudyHelper() {
                       <Label className="text-xs mb-1">Select AI Provider</Label>
                       <Select value={provider} onValueChange={(value) => handleProviderChange(value as "openai" | "gemini")}>
                         <SelectTrigger className="w-full">
-                          <SelectValue />
+                          <SelectValue placeholder="Select provider" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="gemini">
-                            <div className="flex flex-col items-start">
-                              <span className="font-medium">Google Gemini</span>
-                              <span className="text-xs text-muted-foreground">FREE - 1,500 requests/day</span>
-                            </div>
+                            Google Gemini (FREE - 1,500 requests/day)
                           </SelectItem>
                           <SelectItem value="openai">
-                            <div className="flex flex-col items-start">
-                              <span className="font-medium">OpenAI GPT-3.5</span>
-                              <span className="text-xs text-muted-foreground">Paid - ~$0.002/request</span>
-                            </div>
+                            OpenAI GPT-3.5 (Paid - ~$0.002/request)
                           </SelectItem>
                         </SelectContent>
                       </Select>
