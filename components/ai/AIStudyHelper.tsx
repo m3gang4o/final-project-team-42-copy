@@ -30,6 +30,8 @@ import {
   Loader2,
 } from "lucide-react";
 import {
+  extractTextFromPDF,
+  validateFile,
   validateTextLength,
 } from "../../utils/pdf-extractor";
 
@@ -127,21 +129,16 @@ export default function AIStudyHelper() {
   };
 
   /**
-   * Handle PDF file upload and text extraction (server-side)
+   * Handle PDF file upload and text extraction (client-side)
    */
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (file.type !== "application/pdf") {
-      setError("Invalid file type. Please upload a PDF file.");
-      return;
-    }
-
-    // Validate file size (10MB max)
-    if (file.size > 10 * 1024 * 1024) {
-      setError("File size exceeds 10MB limit.");
+    // Validate file
+    const validation = validateFile(file);
+    if (!validation.valid) {
+      setError(validation.error || "Invalid file");
       return;
     }
 
@@ -150,27 +147,25 @@ export default function AIStudyHelper() {
     setUploadedFileName(file.name);
 
     try {
-      // Create FormData and send to server for extraction
-      const formData = new FormData();
-      formData.append("file", file);
+      // Extract text from PDF client-side
+      const extractedText = await extractTextFromPDF(file);
 
-      const response = await fetch("/api/extract-pdf", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Failed to extract text from PDF");
+      // Validate extracted text length
+      const textValidation = validateTextLength(extractedText);
+      if (!textValidation.valid) {
+        throw new Error(textValidation.error || "Text validation failed");
       }
 
       // Set extracted text
-      setInputText(data.text);
+      setInputText(extractedText);
       setError("");
     } catch (err: any) {
       setError(err.message || "Failed to extract text from PDF");
       setUploadedFileName("");
+      // Clear the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     } finally {
       setLoading(false);
     }
