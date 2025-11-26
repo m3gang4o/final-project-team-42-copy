@@ -13,12 +13,11 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
   webpack: (config, { isServer }) => {
-    // Fix for pdfjs-dist with Next.js
     if (!isServer) {
       config.resolve.alias.canvas = false;
       config.resolve.alias.encoding = false;
     }
-    
+
     return config;
   },
   async headers() {

@@ -12,7 +12,7 @@ The AI Study Helper allows students to:
 ## Features
 
 ### 1. Summary Generation
-Paste your notes or upload a PDF, and the AI will generate a concise summary highlighting key concepts and important details.
+Paste your notes into the helper and the AI will generate a concise summary highlighting key concepts and important details.
 
 ### 2. Quiz Questions
 Generate multiple-choice questions based on your study materials. Each question includes:
@@ -32,7 +32,7 @@ Create flashcards with:
 
 The required packages have already been installed:
 ```bash
-npm install openai @google/generative-ai pdfjs-dist
+npm install openai @google/generative-ai
 ```
 
 ### 2. Choose Your AI Provider
@@ -120,7 +120,6 @@ The AI Study Helper supports **two AI providers**. Choose the one that works bes
 1. Navigate to **My Notes** in the sidebar
 2. Click the **AI Study Helper** button in the header
 3. Choose your input method:
-   - **Upload PDF**: Click "Choose PDF" and select a file (max 10MB)
    - **Paste Text**: Copy and paste your notes directly (max 15,000 characters)
 
 ### Generate Study Materials
@@ -148,9 +147,7 @@ The AI Study Helper supports **two AI providers**. Choose the one that works bes
 ### Architecture
 
 ```
-User Input (Text/PDF)
-    ↓
-Client-side PDF extraction (if PDF)
+User Input (Text)
     ↓
 API Route (/api/ai.ts)
     ↓
@@ -172,12 +169,10 @@ Client Display
 
 2. **Components**: `/components/ai/AIStudyHelper.tsx`
    - Main UI component
-   - Handles file uploads
    - Displays results
 
 3. **Utilities**:
    - `/utils/rate-limiter.ts` - Rate limiting logic
-   - `/utils/pdf-extractor.ts` - PDF text extraction
 
 4. **Styles**: `/styles/globals.css`
    - 3D flip card animations
@@ -189,19 +184,10 @@ Client Display
 - **Storage**: In-memory (resets on server restart)
 - **Production**: Consider Redis for distributed rate limiting
 
-### PDF Processing
-
-- **Client-side extraction**: Uses PDF.js library
-- **Max file size**: 10MB
-- **Supported format**: PDF only
-- **Text extraction**: Handles multi-page documents
-
 ### Input Validation
 
 - **Text length**: 15,000 characters max
 - **Empty check**: Prevents blank submissions
-- **File size**: 10MB maximum
-- **File type**: PDF validation
 
 ## Troubleshooting
 
@@ -219,11 +205,6 @@ Client Display
 ### "Rate limit exceeded"
 - Wait 1 minute before trying again
 - Rate limits reset automatically (10 requests/minute)
-
-### "Failed to extract text from PDF"
-- Try a different PDF file
-- Ensure the PDF contains text (not just images)
-- Check file size is under 10MB
 
 ### "Text exceeds maximum length"
 - Reduce input to under 15,000 characters
@@ -257,7 +238,6 @@ Potential improvements for v2:
 - Save generated materials to database
 - Share quizzes with study groups
 - Export flashcards to Anki format
-- Support for images in PDFs (OCR)
 - Custom quiz difficulty levels
 - Spaced repetition for flashcards
 

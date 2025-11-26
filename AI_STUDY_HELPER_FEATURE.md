@@ -18,9 +18,7 @@ The AI Study Helper has been fully implemented and integrated into the StudyBudd
 
 ### 2. Frontend Component (`/components/ai/AIStudyHelper.tsx`)
 - **Modal Interface**: Clean dialog with tabs
-- **Two Input Methods**:
-  - Direct text paste (15,000 char limit)
-  - PDF file upload (10MB max)
+- **Input Method**: Direct text paste (15,000 char limit)
 - **Interactive Results**:
   - Formatted summaries
   - Clickable quiz with instant feedback
@@ -29,7 +27,6 @@ The AI Study Helper has been fully implemented and integrated into the StudyBudd
 
 ### 3. Utilities
 - **Rate Limiter** (`/utils/rate-limiter.ts`): In-memory request tracking
-- **PDF Extractor** (`/utils/pdf-extractor.ts`): Client-side text extraction using PDF.js
 
 ### 4. Integration
 - Added to My Notes page header
@@ -47,8 +44,7 @@ The AI Study Helper has been fully implemented and integrated into the StudyBudd
 ```json
 {
   "openai": "latest",
-  "@google/generative-ai": "latest",
-  "pdfjs-dist": "latest"
+  "@google/generative-ai": "latest"
 }
 ```
 
@@ -84,13 +80,11 @@ The AI Study Helper has been fully implemented and integrated into the StudyBudd
 - `/pages/api/ai.ts` - API route handler
 - `/components/ai/AIStudyHelper.tsx` - Main UI component
 - `/utils/rate-limiter.ts` - Rate limiting utility
-- `/utils/pdf-extractor.ts` - PDF text extraction
 - `/docs/AI_STUDY_HELPER_SETUP.md` - Complete setup guide
 
 ### Modified Files:
 - `/pages/my-notes.tsx` - Added AI Study Helper button
 - `/styles/globals.css` - Added 3D flip card animations
-- `/package.json` - Added OpenAI and PDF.js dependencies
 
 ## 🚀 How to Use
 
@@ -98,7 +92,7 @@ The AI Study Helper has been fully implemented and integrated into the StudyBudd
 2. **Navigate**: Go to My Notes page  
 3. **Open**: Click "AI Study Helper" button
 4. **Add Key**: Paste your OpenAI API key and save it
-5. **Input**: Paste text or upload PDF
+5. **Paste Text**: Add your study notes (up to 15,000 characters)
 6. **Generate**: Choose summary, quiz, or flashcards
 7. **Interact**: 
    - Read summaries
@@ -111,12 +105,11 @@ The AI Study Helper has been fully implemented and integrated into the StudyBudd
 ✅ Summary generation from notes  
 ✅ Auto-generated quiz questions (5 per request)  
 ✅ Flashcard creation (10 per request)  
-✅ PDF text extraction (client-side)  
 ✅ **User-provided API keys** (zero cost to app owner)  
 ✅ Provider selection dropdown  
 ✅ Secure localStorage key management  
 ✅ Rate limiting (10 req/min)  
-✅ Input validation (size, type, length)  
+✅ Input validation (length checks)  
 ✅ Interactive quiz with explanations  
 ✅ 3D flip animations for flashcards  
 ✅ Error handling and user feedback  
@@ -130,8 +123,7 @@ The AI Study Helper has been fully implemented and integrated into the StudyBudd
 - **localStorage Only**: API keys stored in browser, never sent to our servers
 - **Direct to OpenAI**: Keys sent directly to OpenAI API, not through our database
 - **Rate Limiting**: Prevents API abuse (10 req/min per user)
-- **Input Validation**: Size and type checking
-- **Client-side PDF Processing**: No server-side file storage
+- **Input Validation**: Ensures text length limits
 - **Ephemeral Results**: No long-term data storage
 
 ## 💰 Cost Management
@@ -159,11 +151,10 @@ The AI Study Helper has been fully implemented and integrated into the StudyBudd
 
 ## 📈 Technical Highlights
 
-1. **No Database Required**: Results are ephemeral (displayed then discarded)
-2. **Client-side PDF Processing**: Reduces server load
-3. **Type-safe**: Full TypeScript implementation
-4. **Reusable Components**: Uses existing UI component library
-5. **Clean Architecture**: Separated concerns (API, UI, utilities)
+- **No Database Required**: Results are ephemeral (displayed then discarded)
+- **Type-safe**: Full TypeScript implementation
+- **Reusable Components**: Uses existing UI component library
+- **Clean Architecture**: Separated concerns (API, UI, utilities)
 
 ## 🧪 Testing the Feature
 
@@ -194,10 +185,9 @@ The AI Study Helper has been fully implemented and integrated into the StudyBudd
 
 1. **Rate Limit Storage**: In-memory (resets on server restart)
    - For production, consider Redis
-2. **PDF Extraction**: Text-only (no OCR for images)
-3. **No Persistence**: Results aren't saved
+2. **No Persistence**: Results aren't saved
    - Future: Add "Save to Library" feature
-4. **No Sharing**: Can't share generated content with groups
+3. **No Sharing**: Can't share generated content with groups
    - Future: Integration with study groups
 
 ## 🔮 Future Enhancements (v2)
@@ -205,7 +195,6 @@ The AI Study Helper has been fully implemented and integrated into the StudyBudd
 - [ ] Save generated materials to database
 - [ ] Share quizzes with study groups
 - [ ] Export flashcards (Anki format)
-- [ ] OCR support for image-based PDFs
 - [ ] Custom quiz difficulty levels
 - [ ] Spaced repetition algorithm
 - [ ] Quiz history and analytics

@@ -1,10 +1,9 @@
 /**
  * AI Study Helper Modal Component
- * Allows users to submit text or upload PDFs to get AI-generated summaries, quizzes, and flashcards
- * PDF extraction is handled server-side via /api/extract-pdf endpoint
+ * Allows users to paste notes to get AI-generated summaries, quizzes, and flashcards
  */
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +13,6 @@ import {
   DialogTrigger,
 } from "../ui/dialog";
 import { Button } from "../ui/button";
-import { Input } from "../ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
@@ -23,17 +21,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import {
   Brain,
   FileText,
-  Upload,
   Sparkles,
   CheckCircle2,
   XCircle,
   Loader2,
 } from "lucide-react";
-import {
-  extractTextFromPDF,
-  validateFile,
-  validateTextLength,
-} from "../../utils/pdf-extractor";
 
 // Types
 interface QuizQuestion {
@@ -57,7 +49,6 @@ interface AIResult {
 export default function AIStudyHelper() {
   const [open, setOpen] = useState(false);
   const [inputText, setInputText] = useState("");
-  const [uploadedFileName, setUploadedFileName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<AIResult | null>(null);
@@ -66,7 +57,24 @@ export default function AIStudyHelper() {
   const [provider, setProvider] = useState<"openai" | "gemini">("gemini");
   const [apiKey, setApiKey] = useState("");
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const validateText = (text: string, maxLength: number = 15000) => {
+    if (!text || text.trim().length === 0) {
+      return {
+        valid: false,
+        error: "Please provide some text to analyze.",
+      };
+    }
+
+    if (text.length > maxLength) {
+      return {
+        valid: false,
+        error: `Text exceeds maximum length of ${maxLength} characters.`,
+      };
+    }
+
+    return { valid: true };
+  };
 
   // Load API key and provider from localStorage on mount
   useEffect(() => {
@@ -129,49 +137,6 @@ export default function AIStudyHelper() {
   };
 
   /**
-   * Handle PDF file upload and text extraction (client-side)
-   */
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file
-    const validation = validateFile(file);
-    if (!validation.valid) {
-      setError(validation.error || "Invalid file");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    setUploadedFileName(file.name);
-
-    try {
-      // Extract text from PDF client-side
-      const extractedText = await extractTextFromPDF(file);
-
-      // Validate extracted text length
-      const textValidation = validateTextLength(extractedText);
-      if (!textValidation.valid) {
-        throw new Error(textValidation.error || "Text validation failed");
-      }
-
-      // Set extracted text
-      setInputText(extractedText);
-      setError("");
-    } catch (err: any) {
-      setError(err.message || "Failed to extract text from PDF");
-      setUploadedFileName("");
-      // Clear the file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
    * Submit text to AI API for processing
    */
   const handleSubmit = async (type: "summary" | "quiz" | "flashcards") => {
@@ -183,7 +148,7 @@ export default function AIStudyHelper() {
     }
 
     // Validate text
-    const validation = validateTextLength(inputText);
+    const validation = validateText(inputText);
     if (!validation.valid) {
       setError(validation.error || "Invalid text");
       return;
@@ -270,7 +235,7 @@ export default function AIStudyHelper() {
             AI Study Helper
           </DialogTitle>
           <DialogDescription>
-            Upload a PDF or paste your notes to generate summaries, quiz questions, and flashcards
+            Paste your notes to generate summaries, quiz questions, and flashcards
           </DialogDescription>
         </DialogHeader>
 
@@ -393,33 +358,8 @@ export default function AIStudyHelper() {
           {/* Input Section */}
           {!result && !showApiKeyInput && (
             <div className="space-y-4">
-              {/* PDF Upload Section */}
               <div>
-                <Label htmlFor="file-input">Upload PDF</Label>
-                <div className="mt-2 flex items-center gap-2">
-                  <Input
-                    id="file-input"
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleFileUpload}
-                    disabled={loading}
-                    className="cursor-pointer"
-                  />
-                  {uploadedFileName && (
-                    <div className="flex items-center gap-2 text-sm text-green-600">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span className="truncate max-w-[200px]">{uploadedFileName}</span>
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Max file size: 10MB. Text will be extracted automatically.
-                </p>
-              </div>
-              
-              <div>
-                <Label htmlFor="text-input">Or Paste Your Notes</Label>
+                <Label htmlFor="text-input">Paste Your Notes</Label>
                 <Textarea
                   id="text-input"
                   placeholder="Paste your study notes here..."
