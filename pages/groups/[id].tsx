@@ -36,7 +36,7 @@ type GroupMessage = {
   author: {
     name: string | null;
     avatar_url: string | null;
-  } | null;
+  }[]; 
 };
 
 const PAGE_SIZE = 25;
@@ -334,16 +334,16 @@ export default function GroupPage({ group, user, authorId }: GroupPageProps) {
                         <Avatar className="mt-1 h-8 w-8">
                           <AvatarImage
                             src={
-                              msg.author?.avatar_url
+                              msg.author?.[0]?.avatar_url
                                 ? supabase.storage
                                     .from("avatars")
-                                    .getPublicUrl(msg.author.avatar_url).data
+                                    .getPublicUrl(msg.author[0].avatar_url).data
                                     .publicUrl
                                 : undefined
                             }
                           />
                           <AvatarFallback className="text-xs">
-                            {msg.author?.name
+                            {msg.author?.[0]?.name
                               ?.slice(0, 2)
                               .toUpperCase() ?? "U"}
                           </AvatarFallback>
@@ -351,7 +351,7 @@ export default function GroupPage({ group, user, authorId }: GroupPageProps) {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
                             <p className="text-sm font-medium">
-                              {msg.author?.name ?? "Unknown"}
+                              {msg.author?.[0]?.name ?? "Unknown"}
                             </p>
                             <span className="text-xs text-muted-foreground">
                               {formatTime(msg.created_at)}
