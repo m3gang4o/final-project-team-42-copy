@@ -107,12 +107,15 @@ export default function GroupPage({ group, user, authorId }: GroupPageProps) {
           (msg.author || null);
           
         return {
-          ...msg,
+          id: msg.id,
+          message: msg.message,
+          attachment_url: msg.attachment_url,
+          created_at: msg.created_at,
           author: author ? {
             name: author.name || 'Anonymous',
             avatar_url: author.avatar_url
           } : null
-        };
+        } as GroupMessage;
       });
 
       setMessages(transformedData as GroupMessage[]);
@@ -151,17 +154,21 @@ export default function GroupPage({ group, user, authorId }: GroupPageProps) {
       if (error) throw error;
 
       const newMessages = (data ?? []).map(msg => {
+        // Extract the first author from the array if it exists, or use null
         const author = Array.isArray(msg.author) ? 
           (msg.author[0] || null) : 
           (msg.author || null);
           
         return {
-          ...msg,
+          id: msg.id,
+          message: msg.message,
+          attachment_url: msg.attachment_url,
+          created_at: msg.created_at,
           author: author ? {
             name: author.name || 'Anonymous',
             avatar_url: author.avatar_url
           } : null
-        };
+        } as GroupMessage;
       });
 
       setMessages((prev) => [...prev, ...(newMessages as GroupMessage[])]);
