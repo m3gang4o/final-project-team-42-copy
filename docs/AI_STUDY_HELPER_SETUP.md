@@ -32,14 +32,39 @@ Create flashcards with:
 
 The required packages have already been installed:
 ```bash
-npm install openai pdfjs-dist
+npm install openai @google/generative-ai pdfjs-dist
 ```
 
-### 2. Get Your Own OpenAI API Key (Users)
+### 2. Choose Your AI Provider
 
-**Important**: This feature uses **user-provided API keys**. Each user pays for their own usage.
+The AI Study Helper supports **two AI providers**. Choose the one that works best for you:
 
-#### How to Get Your API Key:
+#### **Option A: Google Gemini (Recommended - FREE!)**
+
+**Why Gemini:**
+- ✅ **Completely FREE** for personal use
+- ✅ 1,500 requests per day (45,000/month!)
+- ✅ 15 requests per minute
+- ✅ No credit card required
+- ✅ Quality comparable to GPT-3.5
+
+**How to Get Your FREE Gemini API Key:**
+
+1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Sign in with your Google account
+3. Click **"Create API Key"**
+4. Copy the key immediately (starts with `AIza`)
+5. No credit card needed!
+
+#### **Option B: OpenAI GPT-3.5**
+
+**Why OpenAI:**
+- High-quality responses
+- Well-established API
+- ~$0.002 per request (very affordable)
+- New accounts get $5-$18 in free credits
+
+**How to Get Your OpenAI API Key:**
 
 1. Go to [OpenAI Platform](https://platform.openai.com/api-keys)
 2. Sign up or log in to OpenAI
@@ -51,29 +76,42 @@ npm install openai pdfjs-dist
 #### How to Use Your API Key:
 
 1. Open the AI Study Helper modal in the app
-2. You'll see an API key input field
-3. Paste your key and click "Save Key"
+2. **Select your provider** (Gemini or OpenAI) from the dropdown
+3. Paste your API key and click "Save Key"
 4. Your key is stored **locally in your browser only** (not on any server)
-5. You can change or remove your key anytime
+5. You can change provider or key anytime
 
 **Security Notes:**
 - Your API key never leaves your browser (stored in localStorage)
-- The key is sent directly to OpenAI's servers, not stored in our database
+- The key is sent directly to the AI provider's servers (Google or OpenAI)
+- Not stored in our database
 - You can clear your key anytime by clicking "Change Key"
 
 ### 3. Cost Information
 
-**Who Pays?**: Each user pays for their own OpenAI usage (not the app developer!)
+**Who Pays?**: Each user pays for their own AI usage (not the app developer!)
 
-The AI Study Helper uses GPT-3.5-turbo:
+#### **Gemini (FREE!):**
+- ✅ **$0.00 per request**
+- ✅ 1,500 requests per day (FREE forever)
+- ✅ 15 requests per minute
+- ✅ No billing setup required
+
+**Monitor Gemini Usage:**
+- No billing dashboard (it's free!)
+- Rate limits automatically enforced by Google
+
+#### **OpenAI (Paid):**
 - ~$0.002 per request on average
 - New OpenAI accounts get $5-$18 in free credits
 - 10 requests per minute rate limiting prevents runaway costs
 
-**Monitor Your Usage:**
+**Monitor OpenAI Usage:**
 1. Visit [OpenAI Usage Dashboard](https://platform.openai.com/usage)
 2. Set up billing alerts in your OpenAI account
 3. Set spending limits to control costs
+
+**Recommendation**: Use **Gemini** for unlimited free usage! Only switch to OpenAI if you prefer its responses.
 
 ## Usage
 

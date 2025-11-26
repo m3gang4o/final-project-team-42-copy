@@ -7,14 +7,14 @@ The AI Study Helper has been fully implemented and integrated into the StudyBudd
 ## 🎯 What Was Built
 
 ### 1. Backend API (`/pages/api/ai.ts`)
-- **OpenAI Integration**: Uses GPT-3.5-turbo for AI generation
+- **Dual AI Provider Support**: Google Gemini (FREE) or OpenAI GPT-3.5 (Paid)
 - **Three AI Modes**:
   - Summary generation
   - Quiz question creation (5 questions with explanations)
   - Flashcard generation (10 cards)
 - **Rate Limiting**: 10 requests per minute per user
 - **Input Validation**: Max 15,000 characters
-- **Error Handling**: Comprehensive error messages
+- **Error Handling**: Comprehensive error messages for both providers
 
 ### 2. Frontend Component (`/components/ai/AIStudyHelper.tsx`)
 - **Modal Interface**: Clean dialog with tabs
@@ -47,24 +47,36 @@ The AI Study Helper has been fully implemented and integrated into the StudyBudd
 ```json
 {
   "openai": "latest",
+  "@google/generative-ai": "latest",
   "pdfjs-dist": "latest"
 }
 ```
 
 ## 🔧 Configuration Required
 
-**User-Provided API Keys**: Each user provides their own OpenAI API key.
+**User-Provided API Keys**: Each user chooses their AI provider and provides their own API key.
 
-### For Users:
+### For Users - Two Options:
+
+#### **Option 1: Google Gemini (FREE - Recommended!)**
+1. Get your FREE key from: https://makersuite.google.com/app/apikey
+2. Open AI Study Helper in the app
+3. Select "Google Gemini" from provider dropdown
+4. Paste your key and save
+5. Enjoy unlimited free usage! (1,500 requests/day)
+
+#### **Option 2: OpenAI GPT-3.5 (Paid)**
 1. Get your key from: https://platform.openai.com/api-keys
 2. Open AI Study Helper in the app
-3. Paste your key when prompted
-4. Key is stored locally in your browser only
+3. Select "OpenAI GPT-3.5" from provider dropdown
+4. Paste your key and save
+5. ~$0.002 per request
 
 ### For Developers:
 - No server-side API key needed
 - No `.env.local` configuration required
-- Users pay for their own usage
+- Supports both Gemini and OpenAI
+- Users pay for their own usage (or use free Gemini!)
 
 ## 📁 Files Created/Modified
 
@@ -95,11 +107,13 @@ The AI Study Helper has been fully implemented and integrated into the StudyBudd
 
 ## 🎨 Features Implemented
 
+✅ **Dual AI provider support** (Google Gemini FREE + OpenAI)  
 ✅ Summary generation from notes  
 ✅ Auto-generated quiz questions (5 per request)  
 ✅ Flashcard creation (10 per request)  
 ✅ PDF text extraction (client-side)  
 ✅ **User-provided API keys** (zero cost to app owner)  
+✅ Provider selection dropdown  
 ✅ Secure localStorage key management  
 ✅ Rate limiting (10 req/min)  
 ✅ Input validation (size, type, length)  
@@ -124,12 +138,24 @@ The AI Study Helper has been fully implemented and integrated into the StudyBudd
 
 **Zero Cost to App Owner!** 🎉
 
-- **User-Provided Keys**: Each user pays for their own usage
-- Uses GPT-3.5-turbo (most cost-effective for users)
-- Average cost per user: ~$0.002 per request
-- New OpenAI accounts get $5-$18 in free credits
-- Rate limiting prevents runaway costs for users
-- Users monitor their own usage at: https://platform.openai.com/usage
+**For Users:**
+
+### **Google Gemini (Recommended):**
+- ✅ **$0.00 per request** - Completely FREE!
+- ✅ 1,500 requests per day (45,000/month)
+- ✅ No credit card required
+- ✅ Perfect for students on a budget
+
+### **OpenAI GPT-3.5 (Alternative):**
+- ~$0.002 per request (2/10 of a penny)
+- New accounts get $5-$18 in free credits
+- Free credits = ~2,500 requests
+- Monitor usage at: https://platform.openai.com/usage
+
+**Rate Limiting:**
+- 10 requests per minute per user
+- Prevents accidental overspending
+- Works for both providers
 
 ## 📈 Technical Highlights
 
@@ -141,7 +167,8 @@ The AI Study Helper has been fully implemented and integrated into the StudyBudd
 
 ## 🧪 Testing the Feature
 
-1. **Get an OpenAI API key**: https://platform.openai.com/api-keys
+1. **Get a FREE Gemini API key** (Recommended): https://makersuite.google.com/app/apikey
+   - OR get an OpenAI key: https://platform.openai.com/api-keys
 
 2. Start the development server:
    ```bash
@@ -152,12 +179,16 @@ The AI Study Helper has been fully implemented and integrated into the StudyBudd
 
 4. Click "AI Study Helper"
 
-5. **Paste your API key** and click "Save Key"
+5. **Select your provider** (Gemini for FREE or OpenAI)
 
-6. Test each mode:
+6. **Paste your API key** and click "Save Key"
+
+7. Test each mode:
    - **Summary**: Paste sample notes, generate summary
    - **Quiz**: Same notes, generate quiz, click answers
    - **Flashcards**: Same notes, generate cards, click to flip
+
+**Tip**: Try Gemini first - it's completely free and works great!
 
 ## 🐛 Known Limitations
 

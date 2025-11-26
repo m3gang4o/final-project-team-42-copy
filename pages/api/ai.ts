@@ -1,18 +1,21 @@
 /**
  * AI Study Helper API Route
- * Handles requests for summaries, quiz questions, and flashcards using OpenAI
+ * Handles requests for summaries, quiz questions, and flashcards using OpenAI or Gemini
  */
 
 import { NextApiRequest, NextApiResponse } from "next";
 import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { checkRateLimit } from "../../utils/rate-limiter";
 
 // Types for request/response
 type AIRequestType = "summary" | "quiz" | "flashcards";
+type AIProvider = "openai" | "gemini";
 
 interface AIRequest {
   text: string;
   type: AIRequestType;
+  provider: AIProvider; // AI provider (OpenAI or Gemini)
   apiKey: string; // User-provided API key
   options?: {
     numQuestions?: number;
@@ -159,6 +162,73 @@ async function generateFlashcards(
 }
 
 /**
+ * Generate a summary using Gemini
+ */
+async function generateSummaryGemini(genAI: GoogleGenerativeAI, text: string): Promise<string> {
+  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+  
+  const prompt = `You are a helpful study assistant. Create a clear, concise summary of the following study materials that captures the key concepts and important details:\n\n${text}`;
+  
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  return response.text() || "Unable to generate summary";
+}
+
+/**
+ * Generate quiz questions using Gemini
+ */
+async function generateQuizGemini(
+  genAI: GoogleGenerativeAI,
+  text: string,
+  numQuestions: number = 5
+): Promise<QuizQuestion[]> {
+  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+  
+  const prompt = `You are a helpful study assistant. Create ${numQuestions} multiple-choice questions from the following text. Return ONLY valid JSON with no additional text or formatting. Use this exact format: [{"question": "...", "options": ["A", "B", "C", "D"], "correctAnswer": 0, "explanation": "..."}]\n\nText:\n${text}`;
+  
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  const content = response.text();
+  
+  try {
+    // Clean up the response (remove markdown code blocks if present)
+    const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const questions = JSON.parse(cleanContent);
+    return Array.isArray(questions) ? questions : [];
+  } catch (error) {
+    console.error("Failed to parse quiz questions from Gemini:", error);
+    return [];
+  }
+}
+
+/**
+ * Generate flashcards using Gemini
+ */
+async function generateFlashcardsGemini(
+  genAI: GoogleGenerativeAI,
+  text: string,
+  numFlashcards: number = 10
+): Promise<Flashcard[]> {
+  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+  
+  const prompt = `You are a helpful study assistant. Create ${numFlashcards} flashcards from the following text with concise questions/prompts on the front and clear answers on the back. Return ONLY valid JSON with no additional text or formatting. Use this exact format: [{"front": "question or prompt", "back": "answer or explanation"}]\n\nText:\n${text}`;
+  
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  const content = response.text();
+  
+  try {
+    // Clean up the response (remove markdown code blocks if present)
+    const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const flashcards = JSON.parse(cleanContent);
+    return Array.isArray(flashcards) ? flashcards : [];
+  } catch (error) {
+    console.error("Failed to parse flashcards from Gemini:", error);
+    return [];
+  }
+}
+
+/**
  * Main API handler
  */
 export default async function handler(
@@ -186,7 +256,7 @@ export default async function handler(
     }
 
     // Parse and validate request body
-    const { text, type, apiKey, options } = req.body as AIRequest;
+    const { text, type, provider, apiKey, options } = req.body as AIRequest;
 
     if (!text || text.trim().length === 0) {
       return res.status(400).json({
@@ -209,47 +279,85 @@ export default async function handler(
       });
     }
 
+    if (!["openai", "gemini"].includes(provider)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid provider. Must be 'openai' or 'gemini'",
+      });
+    }
+
     // Check if user provided an API key
     if (!apiKey || apiKey.trim().length === 0) {
       return res.status(400).json({
         success: false,
-        error: "OpenAI API key is required. Please provide your own key.",
+        error: "API key is required. Please provide your own key.",
       });
     }
 
-    // Validate API key format (basic check)
-    if (!apiKey.startsWith("sk-")) {
+    // Validate API key format based on provider
+    if (provider === "openai" && !apiKey.startsWith("sk-")) {
       return res.status(400).json({
         success: false,
-        error: "Invalid API key format. Key should start with 'sk-'",
+        error: "Invalid OpenAI API key format. Key should start with 'sk-'",
       });
     }
 
-    // Create OpenAI client with user's API key
-    const openai = new OpenAI({
-      apiKey: apiKey,
-    });
+    if (provider === "gemini" && !apiKey.startsWith("AIza")) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid Gemini API key format. Key should start with 'AIza'",
+      });
+    }
 
-    // Process request based on type
+    // Process request based on provider and type
     let result: AIResponse["data"] = {};
 
-    switch (type) {
-      case "summary":
-        const summary = await generateSummary(openai, text);
-        result = { summary };
-        break;
+    if (provider === "openai") {
+      // Create OpenAI client with user's API key
+      const openai = new OpenAI({
+        apiKey: apiKey,
+      });
 
-      case "quiz":
-        const numQuestions = options?.numQuestions || 5;
-        const quiz = await generateQuiz(openai, text, numQuestions);
-        result = { quiz };
-        break;
+      switch (type) {
+        case "summary":
+          const summary = await generateSummary(openai, text);
+          result = { summary };
+          break;
 
-      case "flashcards":
-        const numFlashcards = options?.numFlashcards || 10;
-        const flashcards = await generateFlashcards(openai, text, numFlashcards);
-        result = { flashcards };
-        break;
+        case "quiz":
+          const numQuestions = options?.numQuestions || 5;
+          const quiz = await generateQuiz(openai, text, numQuestions);
+          result = { quiz };
+          break;
+
+        case "flashcards":
+          const numFlashcards = options?.numFlashcards || 10;
+          const flashcards = await generateFlashcards(openai, text, numFlashcards);
+          result = { flashcards };
+          break;
+      }
+    } else if (provider === "gemini") {
+      // Create Gemini client with user's API key
+      const genAI = new GoogleGenerativeAI(apiKey);
+
+      switch (type) {
+        case "summary":
+          const summary = await generateSummaryGemini(genAI, text);
+          result = { summary };
+          break;
+
+        case "quiz":
+          const numQuestions = options?.numQuestions || 5;
+          const quiz = await generateQuizGemini(genAI, text, numQuestions);
+          result = { quiz };
+          break;
+
+        case "flashcards":
+          const numFlashcards = options?.numFlashcards || 10;
+          const flashcards = await generateFlashcardsGemini(genAI, text, numFlashcards);
+          result = { flashcards };
+          break;
+      }
     }
 
     // Return success response

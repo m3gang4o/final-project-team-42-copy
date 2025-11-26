@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import {
   Brain,
   FileText,
@@ -60,14 +61,21 @@ export default function AIStudyHelper() {
   const [result, setResult] = useState<AIResult | null>(null);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [flippedCards, setFlippedCards] = useState<Record<number, boolean>>({});
+  const [provider, setProvider] = useState<"openai" | "gemini">("gemini");
   const [apiKey, setApiKey] = useState("");
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load API key from localStorage on mount
+  // Load API key and provider from localStorage on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const savedKey = localStorage.getItem("openai_api_key");
+      const savedProvider = localStorage.getItem("ai_provider") as "openai" | "gemini";
+      const savedKey = localStorage.getItem(`${savedProvider || "gemini"}_api_key`);
+      
+      if (savedProvider) {
+        setProvider(savedProvider);
+      }
+      
       if (savedKey) {
         setApiKey(savedKey);
       } else {
@@ -77,11 +85,12 @@ export default function AIStudyHelper() {
   }, []);
 
   /**
-   * Save API key to localStorage
+   * Save API key and provider to localStorage
    */
   const handleSaveApiKey = (key: string) => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("openai_api_key", key);
+      localStorage.setItem(`${provider}_api_key`, key);
+      localStorage.setItem("ai_provider", provider);
       setApiKey(key);
       setShowApiKeyInput(false);
       setError("");
@@ -93,9 +102,27 @@ export default function AIStudyHelper() {
    */
   const handleClearApiKey = () => {
     if (typeof window !== "undefined") {
-      localStorage.removeItem("openai_api_key");
+      localStorage.removeItem(`${provider}_api_key`);
       setApiKey("");
       setShowApiKeyInput(true);
+    }
+  };
+
+  /**
+   * Handle provider change
+   */
+  const handleProviderChange = (newProvider: "openai" | "gemini") => {
+    setProvider(newProvider);
+    // Load the saved key for the new provider
+    if (typeof window !== "undefined") {
+      const savedKey = localStorage.getItem(`${newProvider}_api_key`);
+      if (savedKey) {
+        setApiKey(savedKey);
+        setShowApiKeyInput(false);
+      } else {
+        setApiKey("");
+        setShowApiKeyInput(true);
+      }
     }
   };
 
@@ -163,6 +190,7 @@ export default function AIStudyHelper() {
         body: JSON.stringify({
           text: inputText,
           type,
+          provider: provider, // Send selected provider
           apiKey: apiKey, // Send user's API key
           options: {
             numQuestions: 5,
@@ -242,14 +270,40 @@ export default function AIStudyHelper() {
                 <div className="flex items-start gap-2">
                   <Sparkles className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <h3 className="font-semibold text-sm mb-1">Your OpenAI API Key Required</h3>
+                    <h3 className="font-semibold text-sm mb-1">AI Provider API Key Required</h3>
                     <p className="text-xs text-muted-foreground mb-3">
-                      This feature uses your own OpenAI account. Your key is stored locally in your browser only.
+                      Choose your AI provider and enter your API key. Your key is stored locally in your browser only.
                     </p>
+                    
+                    {/* Provider Selection */}
+                    <div className="mb-3">
+                      <Label className="text-xs mb-1">Select AI Provider</Label>
+                      <Select value={provider} onValueChange={(value) => handleProviderChange(value as "openai" | "gemini")}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="gemini">
+                            <div className="flex flex-col items-start">
+                              <span className="font-medium">Google Gemini</span>
+                              <span className="text-xs text-muted-foreground">FREE - 1,500 requests/day</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="openai">
+                            <div className="flex flex-col items-start">
+                              <span className="font-medium">OpenAI GPT-3.5</span>
+                              <span className="text-xs text-muted-foreground">Paid - ~$0.002/request</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* API Key Input */}
                     <div className="flex gap-2">
                       <Input
                         type="password"
-                        placeholder="sk-proj-..."
+                        placeholder={provider === "gemini" ? "AIza..." : "sk-proj-..."}
                         value={apiKey}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setApiKey(e.target.value)}
                         className="flex-1"
@@ -262,16 +316,34 @@ export default function AIStudyHelper() {
                         Save Key
                       </Button>
                     </div>
+                    
+                    {/* Provider-specific instructions */}
                     <p className="text-xs text-muted-foreground mt-2">
-                      Get your key from:{" "}
-                      <a
-                        href="https://platform.openai.com/api-keys"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
-                        platform.openai.com/api-keys
-                      </a>
+                      {provider === "gemini" ? (
+                        <>
+                          Get your FREE Gemini key from:{" "}
+                          <a
+                            href="https://makersuite.google.com/app/apikey"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            makersuite.google.com/app/apikey
+                          </a>
+                        </>
+                      ) : (
+                        <>
+                          Get your OpenAI key from:{" "}
+                          <a
+                            href="https://platform.openai.com/api-keys"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            platform.openai.com/api-keys
+                          </a>
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -282,17 +354,27 @@ export default function AIStudyHelper() {
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                 <span className="text-sm text-green-800 dark:text-green-200">
-                  API Key configured ({apiKey.substring(0, 8)}...)
+                  {provider === "gemini" ? "Gemini" : "OpenAI"} API Key configured ({apiKey.substring(0, 8)}...)
                 </span>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearApiKey}
-                className="text-xs"
-              >
-                Change Key
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowApiKeyInput(true)}
+                  className="text-xs"
+                >
+                  Change Provider
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearApiKey}
+                  className="text-xs"
+                >
+                  Change Key
+                </Button>
+              </div>
             </div>
           )}
 
