@@ -36,7 +36,7 @@ type GroupMessage = {
   author: {
     name: string | null;
     avatar_url: string | null;
-  }[];
+  } | null;
 };
 
 const PAGE_SIZE = 25;
@@ -100,10 +100,20 @@ export default function GroupPage({ group, user, authorId }: GroupPageProps) {
 
       if (error) throw error;
 
-      const transformedData = (data ?? []).map(msg => ({
-        ...msg,
-        author: Array.isArray(msg.author) ? msg.author : [msg.author].filter(Boolean)
-      }));
+      const transformedData = (data ?? []).map(msg => {
+        // Extract the first author from the array if it exists, or use null
+        const author = Array.isArray(msg.author) ? 
+          (msg.author[0] || null) : 
+          (msg.author || null);
+          
+        return {
+          ...msg,
+          author: author ? {
+            name: author.name || 'Anonymous',
+            avatar_url: author.avatar_url
+          } : null
+        };
+      });
 
       setMessages(transformedData as GroupMessage[]);
       setCursor(transformedData.length);
@@ -140,10 +150,19 @@ export default function GroupPage({ group, user, authorId }: GroupPageProps) {
 
       if (error) throw error;
 
-      const newMessages = (data ?? []).map(msg => ({
-        ...msg,
-        author: Array.isArray(msg.author) ? msg.author : [msg.author].filter(Boolean)
-      }));
+      const newMessages = (data ?? []).map(msg => {
+        const author = Array.isArray(msg.author) ? 
+          (msg.author[0] || null) : 
+          (msg.author || null);
+          
+        return {
+          ...msg,
+          author: author ? {
+            name: author.name || 'Anonymous',
+            avatar_url: author.avatar_url
+          } : null
+        };
+      });
 
       setMessages((prev) => [...prev, ...(newMessages as GroupMessage[])]);
       setCursor((prev) => prev + newMessages.length);
@@ -341,27 +360,23 @@ export default function GroupPage({ group, user, authorId }: GroupPageProps) {
                     <CardContent className="p-0 pb-2">
                       <div className="flex gap-3">
                         <Avatar className="mt-1 h-8 w-8">
-                          <AvatarImage
-                            src={
-                              msg.author?.[0]?.avatar_url
-                                ? supabase.storage
-                                    .from("avatars")
-                                    .getPublicUrl(msg.author[0].avatar_url).data
-                                    .publicUrl
-                                : undefined
-                            }
-                          />
-                          <AvatarFallback className="text-xs">
-                            {msg.author?.[0]?.name
-                              ?.slice(0, 2)
-                              .toUpperCase() ?? "U"}
-                          </AvatarFallback>
+                          {msg.author?.avatar_url ? (
+                            <img
+                              src={msg.author.avatar_url}
+                              alt={msg.author?.name || "User"}
+                              className="h-6 w-6 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-xs text-gray-600">
+                              {msg.author?.name?.[0]?.toUpperCase() || String(msg.id).slice(-1).toUpperCase()}
+                            </div>
+                          )}
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium">
-                              {msg.author?.[0]?.name ?? "Unknown"}
-                            </p>
+                            <span className="font-medium">
+                              {msg.author?.name || `User ${msg.id}`}
+                            </span>
                             <span className="text-xs text-muted-foreground">
                               {formatTime(msg.created_at)}
                             </span>
