@@ -29,7 +29,6 @@ import {
   Loader2,
 } from "lucide-react";
 import {
-  validateFile,
   validateTextLength,
 } from "../../utils/pdf-extractor";
 
@@ -126,38 +125,8 @@ export default function AIStudyHelper() {
     }
   };
 
-  /**
-   * Handle file upload and text extraction
-   */
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file
-    const validation = validateFile(file);
-    if (!validation.valid) {
-      setError(validation.error || "Invalid file");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      // Dynamically import PDF extraction (client-side only)
-      const { extractTextFromPDF } = await import("../../utils/pdf-extractor");
-      
-      // Extract text from PDF
-      const text = await extractTextFromPDF(file);
-      setInputText(text);
-      setUploadedFileName(file.name);
-      setError("");
-    } catch (err) {
-      setError("Failed to extract text from PDF. Please try a different file.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // PDF upload temporarily disabled due to webpack compatibility issues
+  // Can be re-enabled with proper PDF.js configuration
 
   /**
    * Submit text to AI API for processing
@@ -258,7 +227,7 @@ export default function AIStudyHelper() {
             AI Study Helper
           </DialogTitle>
           <DialogDescription>
-            Upload notes or paste text to generate summaries, quiz questions, and flashcards
+            Paste your notes to generate summaries, quiz questions, and flashcards
           </DialogDescription>
         </DialogHeader>
 
@@ -280,14 +249,20 @@ export default function AIStudyHelper() {
                       <Label className="text-xs mb-1">Select AI Provider</Label>
                       <Select value={provider} onValueChange={(value) => handleProviderChange(value as "openai" | "gemini")}>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select provider" />
+                          <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="gemini">
-                            Google Gemini (FREE - 1,500 requests/day)
+                            <div className="flex flex-col items-start">
+                              <span className="font-medium">Google Gemini</span>
+                              <span className="text-xs text-muted-foreground">FREE - 1,500 requests/day</span>
+                            </div>
                           </SelectItem>
                           <SelectItem value="openai">
-                            OpenAI GPT-3.5 (Paid - ~$0.002/request)
+                            <div className="flex flex-col items-start">
+                              <span className="font-medium">OpenAI GPT-3.5</span>
+                              <span className="text-xs text-muted-foreground">Paid - ~$0.002/request</span>
+                            </div>
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -375,34 +350,8 @@ export default function AIStudyHelper() {
           {/* Input Section */}
           {!result && !showApiKeyInput && (
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="file-upload">Upload PDF (Optional)</Label>
-                <div className="flex items-center gap-2 mt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="gap-2"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Choose PDF
-                  </Button>
-                  <input
-                    ref={fileInputRef}
-                    id="file-upload"
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                  {uploadedFileName && (
-                    <span className="text-sm text-muted-foreground">
-                      {uploadedFileName}
-                    </span>
-                  )}
-                </div>
-              </div>
-
+              {/* PDF Upload temporarily disabled due to webpack issues */}
+              
               <div>
                 <Label htmlFor="text-input">Or Paste Your Notes</Label>
                 <Textarea
