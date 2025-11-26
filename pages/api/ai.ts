@@ -165,7 +165,7 @@ async function generateFlashcards(
  * Generate a summary using Gemini
  */
 async function generateSummaryGemini(genAI: GoogleGenerativeAI, text: string): Promise<string> {
-  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
   
   const prompt = `You are a helpful study assistant. Create a clear, concise summary of the following study materials that captures the key concepts and important details:\n\n${text}`;
   
@@ -182,7 +182,7 @@ async function generateQuizGemini(
   text: string,
   numQuestions: number = 5
 ): Promise<QuizQuestion[]> {
-  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
   
   const prompt = `You are a helpful study assistant. Create ${numQuestions} multiple-choice questions from the following text. Return ONLY valid JSON with no additional text or formatting. Use this exact format: [{"question": "...", "options": ["A", "B", "C", "D"], "correctAnswer": 0, "explanation": "..."}]\n\nText:\n${text}`;
   
@@ -209,7 +209,7 @@ async function generateFlashcardsGemini(
   text: string,
   numFlashcards: number = 10
 ): Promise<Flashcard[]> {
-  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
   
   const prompt = `You are a helpful study assistant. Create ${numFlashcards} flashcards from the following text with concise questions/prompts on the front and clear answers on the back. Return ONLY valid JSON with no additional text or formatting. Use this exact format: [{"front": "question or prompt", "back": "answer or explanation"}]\n\nText:\n${text}`;
   

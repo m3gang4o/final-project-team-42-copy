@@ -1,6 +1,7 @@
 /**
  * AI Study Helper Modal Component
- * Allows users to submit text or upload PDFs to get summaries, quizzes, and flashcards
+ * Allows users to submit text or upload PDFs to get AI-generated summaries, quizzes, and flashcards
+ * PDF extraction is handled server-side via /api/extract-pdf endpoint
  */
 
 import { useState, useRef, useEffect } from "react";
@@ -125,8 +126,55 @@ export default function AIStudyHelper() {
     }
   };
 
-  // PDF upload temporarily disabled due to webpack compatibility issues
-  // Can be re-enabled with proper PDF.js configuration
+  /**
+   * Handle PDF file upload and text extraction (server-side)
+   */
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== "application/pdf") {
+      setError("Invalid file type. Please upload a PDF file.");
+      return;
+    }
+
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      setError("File size exceeds 10MB limit.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setUploadedFileName(file.name);
+
+    try {
+      // Create FormData and send to server for extraction
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/extract-pdf", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to extract text from PDF");
+      }
+
+      // Set extracted text
+      setInputText(data.text);
+      setError("");
+    } catch (err: any) {
+      setError(err.message || "Failed to extract text from PDF");
+      setUploadedFileName("");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   /**
    * Submit text to AI API for processing
@@ -227,7 +275,7 @@ export default function AIStudyHelper() {
             AI Study Helper
           </DialogTitle>
           <DialogDescription>
-            Paste your notes to generate summaries, quiz questions, and flashcards
+            Upload a PDF or paste your notes to generate summaries, quiz questions, and flashcards
           </DialogDescription>
         </DialogHeader>
 
@@ -350,7 +398,30 @@ export default function AIStudyHelper() {
           {/* Input Section */}
           {!result && !showApiKeyInput && (
             <div className="space-y-4">
-              {/* PDF Upload temporarily disabled due to webpack issues */}
+              {/* PDF Upload Section */}
+              <div>
+                <Label htmlFor="file-input">Upload PDF</Label>
+                <div className="mt-2 flex items-center gap-2">
+                  <Input
+                    id="file-input"
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileUpload}
+                    disabled={loading}
+                    className="cursor-pointer"
+                  />
+                  {uploadedFileName && (
+                    <div className="flex items-center gap-2 text-sm text-green-600">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span className="truncate max-w-[200px]">{uploadedFileName}</span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Max file size: 10MB. Text will be extracted automatically.
+                </p>
+              </div>
               
               <div>
                 <Label htmlFor="text-input">Or Paste Your Notes</Label>
