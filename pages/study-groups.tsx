@@ -332,6 +332,7 @@ export default function StudyGroupsPage() {
               {filteredGroups.map((group) => (
                 <Card
                   key={group.id}
+                  onClick={() => router.push(`/groups/${group.id}`)}
                   className="hover:shadow-lg transition-shadow cursor-pointer group"
                 >
                   <CardContent className="p-4">
