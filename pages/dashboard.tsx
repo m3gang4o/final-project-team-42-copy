@@ -61,6 +61,19 @@ interface StudyGroup {
   owner_id: number;
 }
 
+interface RecentActivity {
+  id: number;
+  groupId: number;
+  groupName: string;
+  groupColor: string;
+  authorName: string;
+  authorId: number;
+  message: string | null;
+  attachmentUrl: string | null;
+  createdAt: Date;
+  activityType: 'message' | 'attachment';
+}
+
 const initialStudyGroups: StudyGroup[] = [];
 
 export default function DashboardPage() {
@@ -69,8 +82,11 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [studyGroups, setStudyGroups] = useState<StudyGroup[]>(initialStudyGroups);
   const [discoverGroups, setDiscoverGroups] = useState<StudyGroup[]>([]);
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [discoverLoading, setDiscoverLoading] = useState(false);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("my-groups");
   const [userName, setUserName] = useState("User");
   const [userEmail, setUserEmail] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -90,6 +106,7 @@ export default function DashboardPage() {
     fetchGroups();
     fetchUser();
     fetchDiscoverGroups();
+    fetchRecentActivities();
   }, []);
 
   const fetchUser = async () => {
@@ -253,6 +270,80 @@ export default function DashboardPage() {
       console.error("Error fetching discover groups:", error);
     } finally {
       setDiscoverLoading(false);
+    }
+  };
+
+  const fetchRecentActivities = async () => {
+    try {
+      setActivitiesLoading(true);
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
+
+      // Get all groups the user is a member of
+      const { data: userMemberships } = await supabase
+        .from("memberships")
+        .select("group_id")
+        .eq("user_id", userId);
+
+      if (!userMemberships || userMemberships.length === 0) {
+        setRecentActivities([]);
+        return;
+      }
+
+      const userGroupIds = userMemberships.map((m: any) => m.group_id);
+
+      // Fetch recent messages from all user's groups
+      const { data: messages, error } = await supabase
+        .from("messages")
+        .select(`
+          id,
+          group_id,
+          author_id,
+          message,
+          attachment_url,
+          created_at,
+          groups!messages_group_id_fkey(
+            id,
+            name
+          ),
+          author:users!messages_author_id_fkey(
+            id,
+            name
+          )
+        `)
+        .in("group_id", userGroupIds)
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      // Transform messages into activities
+      const activities: RecentActivity[] = (messages || []).map((msg: any) => {
+        const group = Array.isArray(msg.groups) ? msg.groups[0] : msg.groups;
+        const author = Array.isArray(msg.author) ? msg.author[0] : msg.author;
+        const groupId = group?.id || msg.group_id;
+        const activityType = msg.attachment_url ? 'attachment' : 'message';
+
+        return {
+          id: msg.id,
+          groupId: groupId,
+          groupName: group?.name || 'Unknown Group',
+          groupColor: groupColors[groupId % groupColors.length],
+          authorName: author?.name || 'Anonymous',
+          authorId: author?.id || msg.author_id,
+          message: msg.message,
+          attachmentUrl: msg.attachment_url,
+          createdAt: new Date(msg.created_at),
+          activityType: activityType,
+        };
+      });
+
+      setRecentActivities(activities);
+    } catch (error) {
+      console.error("Error fetching recent activities:", error);
+    } finally {
+      setActivitiesLoading(false);
     }
   };
 
@@ -420,6 +511,7 @@ export default function DashboardPage() {
       // Refresh groups list
       fetchGroups();
       fetchDiscoverGroups();
+      fetchRecentActivities();
       
       setIsJoinGroupOpen(false);
       setJoinCode("");
@@ -467,6 +559,7 @@ export default function DashboardPage() {
       // Refresh groups list
       fetchGroups();
       fetchDiscoverGroups();
+      fetchRecentActivities();
 
       setDeleteDialogOpen(false);
       setSelectedGroupForDelete(null);
@@ -498,6 +591,7 @@ export default function DashboardPage() {
       // Refresh groups list
       fetchGroups();
       fetchDiscoverGroups();
+      fetchRecentActivities();
 
       setLeaveDialogOpen(false);
       setSelectedGroupForLeave(null);
@@ -541,6 +635,7 @@ export default function DashboardPage() {
       // Refresh groups list
       fetchGroups();
       fetchDiscoverGroups();
+      fetchRecentActivities();
     } catch (error: unknown) {
       console.error("Error joining group:", error);
       alert(`Failed to join group: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -570,6 +665,35 @@ export default function DashboardPage() {
         group.description.toLowerCase().includes(query)
     );
   }, [searchQuery, discoverGroups]);
+
+  const filteredRecentActivities = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return recentActivities;
+    }
+    const query = searchQuery.toLowerCase().trim();
+    return recentActivities.filter(
+      (activity) =>
+        activity.groupName.toLowerCase().includes(query) ||
+        activity.authorName.toLowerCase().includes(query) ||
+        (activity.message && activity.message.toLowerCase().includes(query))
+    );
+  }, [searchQuery, recentActivities]);
+
+  const getActivityDescription = (activity: RecentActivity): string => {
+    const isCurrentUser = activity.authorId === currentUserId;
+    const authorName = isCurrentUser ? 'You' : activity.authorName;
+    
+    if (activity.activityType === 'attachment') {
+      const fileName = activity.attachmentUrl?.split('/').pop() || 'a file';
+      return `${authorName} uploaded ${fileName}`;
+    } else if (activity.message) {
+      const messagePreview = activity.message.length > 50 
+        ? activity.message.substring(0, 50) + '...'
+        : activity.message;
+      return `${authorName}: ${messagePreview}`;
+    }
+    return `${authorName} posted in ${activity.groupName}`;
+  };
 
   const handleCopyJoinCode = async (groupId: number) => {
     try {
@@ -843,7 +967,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Tabs and Search */}
-          <Tabs defaultValue="my-groups" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="flex items-center justify-between mb-4">
               <TabsList>
                 <TabsTrigger value="my-groups">My Groups</TabsTrigger>
@@ -854,7 +978,13 @@ export default function DashboardPage() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   type="text"
-                  placeholder="Search your groups..."
+                  placeholder={
+                    activeTab === "recent-activity" 
+                      ? "Search activities..." 
+                      : activeTab === "discover"
+                      ? "Search groups..."
+                      : "Search your groups..."
+                  }
                   className="pl-10"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -1050,9 +1180,48 @@ export default function DashboardPage() {
 
             {/* Recent Activity Tab */}
             <TabsContent value="recent-activity" className="mt-6">
-              <div className="text-center py-12 text-gray-500">
-                <p>Recent activity coming soon...</p>
-              </div>
+              {activitiesLoading ? (
+                <div className="text-center py-12 text-gray-500">
+                  <p>Loading activities...</p>
+                </div>
+              ) : filteredRecentActivities.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <p>No recent activity. Join groups and start collaborating!</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredRecentActivities.map((activity) => (
+                    <Card
+                      key={activity.id}
+                      className="hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => router.push(`/groups/${activity.groupId}`)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-4">
+                          <div
+                            className={`w-10 h-10 ${activity.groupColor} rounded-lg flex items-center justify-center flex-shrink-0`}
+                          >
+                            <Book className="h-5 w-5 text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="text-sm font-semibold text-gray-900">
+                                {activity.groupName}
+                              </h3>
+                            </div>
+                            <p className="text-sm text-gray-700 mb-2">
+                              {getActivityDescription(activity)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {formatTimeAgo(activity.createdAt)}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>
