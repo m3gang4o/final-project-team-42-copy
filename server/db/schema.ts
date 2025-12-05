@@ -52,7 +52,7 @@ export const membershipsTable = pgTable("memberships", {
 /** Messages table (for notes board with file attachments) */
 export const messagesTable = pgTable("messages", {
   id: serial("id").primaryKey(),
-  group_id: integer("group_id").notNull().references(() => groupsTable.id),
+  group_id: integer("group_id").references(() => groupsTable.id), // Nullable for personal notes
   author_id: integer("author_id").notNull().references(() => usersTable.id),
   message: text("message"),
   attachment_url: text("attachment_url"),
