@@ -917,16 +917,6 @@ export default function DashboardPage() {
                         <span>Group Chats</span>
                       </button>
                     </li>
-                    <li>
-                      <button
-                        onClick={() => router.push("/ai-assistant")}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-accent transition-colors"
-                        title="AI Assistant"
-                      >
-                        <Sparkles className="h-5 w-5 flex-shrink-0" />
-                        <span>AI Assistant</span>
-                      </button>
-                    </li>
                    
                     <li>
                       <button
