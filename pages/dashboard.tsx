@@ -2,9 +2,11 @@ import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/router";
 import { createSupabaseComponentClient } from "@/utils/supabase/clients/component";
 import { Book, Home, Users, Sparkles, MessageSquare, FileText, Settings, Search, Plus, Flame, TrendingUp, PanelLeft, ChevronRight, Copy, Check, Share2, Clock, Trash2, LogOut } from "lucide-react";
+import { ModeToggle } from "@/components/theme/mode-toggle";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -89,11 +91,11 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("my-groups");
   const [userName, setUserName] = useState("User");
   const [userEmail, setUserEmail] = useState("");
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [copiedGroupId, setCopiedGroupId] = useState<number | null>(null);
 
-  // Update current time every minute for relative time display
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
@@ -111,16 +113,67 @@ export default function DashboardPage() {
     calculateStudyStreak();
   }, []);
 
+  useEffect(() => {
+    const handleRouteChange = () => {
+      fetchUser();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchUser();
+      }
+    };
+
+    const handleFocus = () => {
+      fetchUser();
+    };
+
+    router.events.on('routeChangeComplete', handleRouteChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [router]);
+
   const fetchUser = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // Try to get name from user metadata or email
-        const name = user.user_metadata?.name || user.email?.split('@')[0] || "User";
-        setUserName(name);
-        setUserEmail(user.email || "");
         const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
         setCurrentUserId(userId);
+        setUserEmail(user.email || "");
+
+        if (userId) {
+          const { data: dbUser, error: dbError } = await supabase
+            .from("users")
+            .select("name, avatar_url")
+            .eq("id", userId)
+            .single();
+
+          if (!dbError && dbUser) {
+            setUserName(dbUser.name || user.user_metadata?.name || user.email?.split('@')[0] || "User");
+            if (dbUser.avatar_url) {
+              if (dbUser.avatar_url.startsWith('http')) {
+                setUserAvatarUrl(dbUser.avatar_url);
+              } else {
+                const { data: { publicUrl } } = supabase.storage
+                  .from("group-files")
+                  .getPublicUrl(dbUser.avatar_url);
+                setUserAvatarUrl(publicUrl);
+              }
+            } else {
+              setUserAvatarUrl(null);
+            }
+          } else {
+            const name = user.user_metadata?.name || user.email?.split('@')[0] || "User";
+            setUserName(name);
+            setUserAvatarUrl(null);
+          }
+        }
       }
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -129,11 +182,9 @@ export default function DashboardPage() {
 
   const fetchGroups = async () => {
     try {
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1; // Fallback to test user
+      const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
 
-      // Fetch only groups where user is a member
       const { data, error } = await supabase
         .from("memberships")
         .select(`
@@ -151,19 +202,16 @@ export default function DashboardPage() {
       
       if (error) throw error;
       
-      // Get member and message counts for each group along with last activity
       const groupsWithCounts = await Promise.all(
         (data || []).map(async (membership: any) => {
           const group = membership.groups;
           if (!group) return null;
 
-          // Get member count
           const { count: memberCount } = await supabase
             .from("memberships")
             .select("*", { count: "exact", head: true })
             .eq("group_id", group.id);
 
-          // Get message count and most recent message
           const { count: messageCount } = await supabase
             .from("messages")
             .select("*", { count: "exact", head: true })
@@ -177,7 +225,6 @@ export default function DashboardPage() {
             .limit(1)
             .maybeSingle();
 
-          // If no messages exist, use the group's creation time as last activity
           let lastActivity = new Date(group.created_at);
           if (recentMessage?.created_at) {
             lastActivity = new Date(recentMessage.created_at);
@@ -200,7 +247,6 @@ export default function DashboardPage() {
       const formattedGroups: StudyGroup[] = groupsWithCounts.filter((g) => g !== null) as StudyGroup[];
       setStudyGroups(formattedGroups);
       
-      // Calculate total resources across all groups
       const total = formattedGroups.reduce((sum, group) => sum + group.resources, 0);
       setTotalResources(total);
     } catch (error) {
@@ -213,11 +259,9 @@ export default function DashboardPage() {
   const fetchDiscoverGroups = async () => {
     try {
       setDiscoverLoading(true);
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
 
-      // Get all groups the user is already a member of
       const { data: userMemberships } = await supabase
         .from("memberships")
         .select("group_id")
@@ -225,7 +269,6 @@ export default function DashboardPage() {
 
       const userGroupIds = new Set((userMemberships || []).map((m: any) => m.group_id));
 
-      // Fetch all public groups
       const { data: allGroups, error } = await supabase
         .from("groups")
         .select("id, name, description, owner_id, is_private, created_at")
@@ -235,19 +278,15 @@ export default function DashboardPage() {
 
       if (error) throw error;
 
-      // Filter out groups user is already a member of
       const discoverableGroups = (allGroups || []).filter((group: any) => !userGroupIds.has(group.id)).slice(0, 20);
 
-      // Get member and message counts for each group along with last activity
       const groupsWithCounts = await Promise.all(
         discoverableGroups.map(async (group: any) => {
-          // Get member count
           const { count: memberCount } = await supabase
             .from("memberships")
             .select("*", { count: "exact", head: true })
             .eq("group_id", group.id);
 
-          // Get message count and most recent message
           const { count: messageCount } = await supabase
             .from("messages")
             .select("*", { count: "exact", head: true })
@@ -261,7 +300,6 @@ export default function DashboardPage() {
             .limit(1)
             .maybeSingle();
 
-          // If no messages exist, use the group's creation time as last activity
           let lastActivity = new Date(group.created_at);
           if (recentMessage?.created_at) {
             lastActivity = new Date(recentMessage.created_at);
@@ -292,11 +330,9 @@ export default function DashboardPage() {
   const fetchRecentActivities = async () => {
     try {
       setActivitiesLoading(true);
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
 
-      // Get all groups the user is a member of
       const { data: userMemberships } = await supabase
         .from("memberships")
         .select("group_id")
@@ -309,7 +345,6 @@ export default function DashboardPage() {
 
       const userGroupIds = userMemberships.map((m: any) => m.group_id);
 
-      // Fetch recent messages from all user's groups
       const { data: messages, error } = await supabase
         .from("messages")
         .select(`
@@ -334,7 +369,6 @@ export default function DashboardPage() {
 
       if (error) throw error;
 
-      // Transform messages into activities
       const activities: RecentActivity[] = (messages || []).map((msg: any) => {
         const group = Array.isArray(msg.groups) ? msg.groups[0] : msg.groups;
         const author = Array.isArray(msg.author) ? msg.author[0] : msg.author;
@@ -818,12 +852,12 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-background">
       <aside className="fixed left-0 top-0 h-screen flex flex-col transition-all duration-300 z-50">
         <Collapsible
           open={!isSidebarCollapsed}
           onOpenChange={(open: boolean) => setIsSidebarCollapsed(!open)}
-          className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} h-full bg-white border-r border-gray-200 flex flex-col`}
+          className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} h-full bg-card border-r border-border flex flex-col`}
         >
           {/* Collapse Trigger */}
           <div className="absolute right-4 top-6 z-10">
@@ -831,7 +865,7 @@ export default function DashboardPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 p-0 bg-white border border-gray-200"
+                className="h-8 w-8 p-0 bg-card border border-border"
                 title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 {isSidebarCollapsed ? (
@@ -847,26 +881,26 @@ export default function DashboardPage() {
           <CollapsibleContent className="flex-1 flex flex-col h-full">
             <div>
               {/* Logo */}
-              <div className="p-6 border-b border-gray-200">
+              <div className="p-6 border-b border-border">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-[#4B9CD3] rounded flex items-center justify-center flex-shrink-0">
                     <Book className="h-5 w-5 text-white" />
                   </div>
-                  <span className="text-xl font-bold text-[#13294B] whitespace-nowrap">StudyBuddy</span>
+                  <span className="text-xl font-bold text-foreground whitespace-nowrap">StudyBuddy</span>
                 </div>
               </div>
 
               {/* Menu */}
               <nav className="p-4 space-y-6">
                 <div>
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                     Menu
                   </h3>
                   <ul className="space-y-1">
                     <li>
                       <button
                         onClick={() => router.push("/dashboard")}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-100 text-gray-900 font-medium"
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-accent text-foreground font-medium"
                         title="Dashboard"
                       >
                         <Home className="h-5 w-5 flex-shrink-0" />
@@ -876,7 +910,7 @@ export default function DashboardPage() {
                     <li>
                       <button
                         onClick={() => router.push("/study-groups")}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-accent transition-colors"
                         title="Study Groups"
                       >
                         <Users className="h-5 w-5 flex-shrink-0" />
@@ -886,7 +920,7 @@ export default function DashboardPage() {
                     <li>
                       <button
                         onClick={() => router.push("/ai-assistant")}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-accent transition-colors"
                         title="AI Assistant"
                       >
                         <Sparkles className="h-5 w-5 flex-shrink-0" />
@@ -896,7 +930,7 @@ export default function DashboardPage() {
                     <li>
                       <button
                         onClick={() => router.push("/group-chat")}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-accent transition-colors"
                         title="Group Chat"
                       >
                         <MessageSquare className="h-5 w-5 flex-shrink-0" />
@@ -906,7 +940,7 @@ export default function DashboardPage() {
                     <li>
                       <button
                         onClick={() => router.push("/my-notes")}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-accent transition-colors"
                         title="My Notes"
                       >
                         <FileText className="h-5 w-5 flex-shrink-0" />
@@ -918,14 +952,14 @@ export default function DashboardPage() {
 
                 {/* Account */}
                 <div>
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                     Account
                   </h3>
                   <ul className="space-y-1">
                     <li>
                       <button
                         onClick={() => router.push("/settings")}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-accent transition-colors"
                         title="Settings"
                       >
                         <Settings className="h-5 w-5 flex-shrink-0" />
@@ -937,18 +971,24 @@ export default function DashboardPage() {
               </nav>
             </div>
 
-            <div className="mt-auto p-4 border-t border-gray-200">
+            <div className="mt-auto p-4 border-t border-border">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm font-semibold text-gray-700">
-                    {userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                  </span>
-                </div>
+                <Avatar className="w-10 h-10 flex-shrink-0">
+                  <AvatarImage 
+                    src={userAvatarUrl || undefined} 
+                    className="object-cover"
+                  />
+                  <AvatarFallback className="bg-muted">
+                    <span className="text-sm font-semibold text-muted-foreground">
+                      {userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                    </span>
+                  </AvatarFallback>
+                </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                  <p className="text-sm font-medium text-foreground truncate">
                     {userName}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">
+                  <p className="text-xs text-muted-foreground truncate">
                     {userEmail}
                   </p>
                 </div>
@@ -961,21 +1001,24 @@ export default function DashboardPage() {
       {/* Main Content */}
       <main className={`flex-1 overflow-y-auto p-8 transition-all duration-300 ${isSidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
         {/* Welcome Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome, {userName}!
-          </h1>
-          <p className="text-gray-600">
-            Here&apos;s what&apos;s happening with your study groups today.
-          </p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">
+              Welcome, {userName}!
+            </h1>
+            <p className="text-muted-foreground">
+              Here&apos;s what&apos;s happening with your study groups today.
+            </p>
+          </div>
+          <ModeToggle />
         </div>
 
         {/* Study Groups Section */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Study Groups</h2>
-              <p className="text-gray-600 mt-1">
+              <h2 className="text-2xl font-bold text-foreground">Study Groups</h2>
+              <p className="text-muted-foreground mt-1">
                 Join course-specific groups to collaborate with classmates
               </p>
             </div>
@@ -990,7 +1033,7 @@ export default function DashboardPage() {
               <Button
                 onClick={() => setIsJoinGroupOpen(true)}
                 variant="outline"
-                className="border-gray-300"
+                className="border-border"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Join Group
@@ -1004,17 +1047,17 @@ export default function DashboardPage() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 mb-2">
+                    <p className="text-sm font-medium text-muted-foreground mb-2">
                       Total Groups
                     </p>
-                    <p className="text-3xl font-bold text-gray-900">
+                    <p className="text-3xl font-bold text-foreground">
                       {studyGroups.length}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {studyGroups.length === 0 ? 'Create your first group' : 'Across all courses'}
                     </p>
                   </div>
-                  <Users className="h-6 w-6 text-gray-400 flex-shrink-0" />
+                  <Users className="h-6 w-6 text-muted-foreground flex-shrink-0" />
                 </div>
               </CardContent>
             </Card>
@@ -1023,17 +1066,17 @@ export default function DashboardPage() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 mb-2">
+                    <p className="text-sm font-medium text-muted-foreground mb-2">
                       Total Members
                     </p>
-                    <p className="text-3xl font-bold text-gray-900">
+                    <p className="text-3xl font-bold text-foreground">
                       {studyGroups.reduce((sum, group) => sum + group.members, 0)}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {studyGroups.length > 0 ? 'In your groups' : 'Join a group to get started'}
                     </p>
                   </div>
-                  <Users className="h-6 w-6 text-gray-400 flex-shrink-0" />
+                  <Users className="h-6 w-6 text-muted-foreground flex-shrink-0" />
                 </div>
               </CardContent>
             </Card>
@@ -1042,17 +1085,17 @@ export default function DashboardPage() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 mb-2">
+                    <p className="text-sm font-medium text-muted-foreground mb-2">
                       Messages & Files
                     </p>
-                    <p className="text-3xl font-bold text-gray-900">
+                    <p className="text-3xl font-bold text-foreground">
                       {totalResources}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {totalResources > 0 ? 'Across all your groups' : 'No messages yet'}
                     </p>
                   </div>
-                  <FileText className="h-6 w-6 text-gray-400 flex-shrink-0" />
+                  <FileText className="h-6 w-6 text-muted-foreground flex-shrink-0" />
                 </div>
               </CardContent>
             </Card>
@@ -1061,17 +1104,17 @@ export default function DashboardPage() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 mb-2">
+                    <p className="text-sm font-medium text-muted-foreground mb-2">
                       Study Streak
                     </p>
-                    <p className="text-3xl font-bold text-gray-900 flex items-center gap-1">
+                    <p className="text-3xl font-bold text-foreground flex items-center gap-1">
                       {studyStreak} day{studyStreak !== 1 ? 's' : ''} {studyStreak > 0 && <Flame className="h-5 w-5 text-orange-500" />}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {studyStreak === 0 ? 'Start your streak today!' : studyStreak < 3 ? 'Keep it up!' : studyStreak < 7 ? 'Great job!' : 'Amazing streak!'}
                     </p>
                   </div>
-                  <TrendingUp className="h-6 w-6 text-gray-400 flex-shrink-0" />
+                  <TrendingUp className="h-6 w-6 text-muted-foreground flex-shrink-0" />
                 </div>
               </CardContent>
             </Card>
@@ -1086,7 +1129,7 @@ export default function DashboardPage() {
                 <TabsTrigger value="recent-activity">Recent Activity</TabsTrigger>
               </TabsList>
               <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="text"
                   placeholder={
@@ -1106,7 +1149,7 @@ export default function DashboardPage() {
             {/* My Groups Tab */}
             <TabsContent value="my-groups" className="mt-6">
               {filteredStudyGroups.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
+                <div className="text-center py-12 text-muted-foreground">
                   <p>Create your first study group!</p>
                 </div>
               ) : (
@@ -1135,7 +1178,7 @@ export default function DashboardPage() {
                     )}
                     <div className="flex items-start gap-4">
                       {group.imageUrl ? (
-                          <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden border border-gray-200">
+                          <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden border border-border">
                             <img
                               src={group.imageUrl}
                               alt={group.name}
@@ -1150,13 +1193,13 @@ export default function DashboardPage() {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                          <h3 className="text-lg font-semibold text-foreground mb-1">
                             {group.name}
                           </h3>
-                          <p className="text-sm text-gray-600 mb-3">
+                          <p className="text-sm text-muted-foreground mb-3">
                             {group.description}
                           </p>
-                          <div className="flex items-center gap-4 text-sm text-gray-600">
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <div className="flex items-center gap-1">
                               <Users className="h-4 w-4" />
                               <span>{group.members} members</span>
@@ -1167,8 +1210,8 @@ export default function DashboardPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5 mt-3 mb-3">
-                            <Clock className="h-3.5 w-3.5 text-gray-500" />
-                            <span className="text-xs text-gray-700">
+                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-xs text-foreground">
                               Recent activity: {formatTimeAgo(group.lastActivity)}
                             </span>
                           </div>
@@ -1213,11 +1256,11 @@ export default function DashboardPage() {
             {/* Discover Tab */}
             <TabsContent value="discover" className="mt-6">
               {discoverLoading ? (
-                <div className="text-center py-12 text-gray-500">
+                <div className="text-center py-12 text-muted-foreground">
                   <p>Loading groups...</p>
                 </div>
               ) : filteredDiscoverGroups.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
+                <div className="text-center py-12 text-muted-foreground">
                   <p>No groups available to discover. Create your own group to get started!</p>
                 </div>
               ) : (
@@ -1231,7 +1274,7 @@ export default function DashboardPage() {
                       <CardContent className="p-6 relative">
                         <div className="flex items-start gap-4">
                           {group.imageUrl ? (
-                            <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden border border-gray-200">
+                            <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden border border-border">
                               <img
                                 src={group.imageUrl}
                                 alt={group.name}
@@ -1246,13 +1289,13 @@ export default function DashboardPage() {
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                            <h3 className="text-lg font-semibold text-foreground mb-1">
                               {group.name}
                             </h3>
-                            <p className="text-sm text-gray-600 mb-3">
+                            <p className="text-sm text-muted-foreground mb-3">
                               {group.description}
                             </p>
-                            <div className="flex items-center gap-4 text-sm text-gray-600">
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <Users className="h-4 w-4" />
                                 <span>{group.members} members</span>
@@ -1263,8 +1306,8 @@ export default function DashboardPage() {
                               </div>
                             </div>
                             <div className="flex items-center gap-1.5 mt-3 mb-3">
-                              <Clock className="h-3.5 w-3.5 text-gray-500" />
-                              <span className="text-xs text-gray-700">
+                              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-xs text-foreground">
                                 Recent activity: {formatTimeAgo(group.lastActivity)}
                               </span>
                             </div>
@@ -1292,11 +1335,11 @@ export default function DashboardPage() {
             {/* Recent Activity Tab */}
             <TabsContent value="recent-activity" className="mt-6">
               {activitiesLoading ? (
-                <div className="text-center py-12 text-gray-500">
+                <div className="text-center py-12 text-muted-foreground">
                   <p>Loading activities...</p>
                 </div>
               ) : filteredRecentActivities.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
+                <div className="text-center py-12 text-muted-foreground">
                   <p>No recent activity. Join groups and start collaborating!</p>
                 </div>
               ) : (
@@ -1316,14 +1359,14 @@ export default function DashboardPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <h3 className="text-sm font-semibold text-gray-900">
+                              <h3 className="text-sm font-semibold text-foreground">
                                 {activity.groupName}
                               </h3>
                             </div>
-                            <p className="text-sm text-gray-700 mb-2">
+                            <p className="text-sm text-foreground mb-2">
                               {getActivityDescription(activity)}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                               {formatTimeAgo(activity.createdAt)}
                             </p>
                           </div>
@@ -1390,7 +1433,7 @@ export default function DashboardPage() {
                   <img
                     src={groupImagePreview}
                     alt="Group preview"
-                    className="w-24 h-24 object-cover rounded-lg border border-gray-200"
+                    className="w-24 h-24 object-cover rounded-lg border border-border"
                   />
                 </div>
               )}
@@ -1495,7 +1538,7 @@ export default function DashboardPage() {
                     </>
                   )}
                 </Button>
-                <p className="text-xs text-gray-500 text-center">
+                <p className="text-xs text-muted-foreground text-center">
                   Anyone with this code can join your group by entering it in the &quot;Join Group&quot; section
                 </p>
               </div>

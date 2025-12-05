@@ -16,7 +16,7 @@ function App({ Component, pageProps }: AppProps) {
   return (
     <ThemeProvider
       attribute="class"
-      defaultTheme="auto"
+      defaultTheme="system"
       enableSystem
       disableTransitionOnChange
     >
