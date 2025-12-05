@@ -1014,7 +1014,6 @@ export default function DashboardPage() {
                 <Button
                   onClick={() => setIsJoinGroupOpen(true)}
                   variant="outline"
-                  className="border-gray-300 text-black hover:bg-gray-100"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Join Group
