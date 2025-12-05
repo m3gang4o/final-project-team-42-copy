@@ -334,6 +334,7 @@ export default function MyNotesPage() {
       setIsShareDialogOpen(false);
       setDocumentToShare(null);
       setSelectedGroupId(null);
+      fetchDocuments(); // Refresh the documents list to show the newly shared note
     } catch (error) {
       console.error("Error sharing document:", error);
       alert("Failed to share document");
