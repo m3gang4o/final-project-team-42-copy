@@ -144,7 +144,8 @@ export default function AIStudyHelper() {
   const handleSubmit = async (type: "summary" | "quiz" | "flashcards") => {
     // Check if API key is provided
     if (!apiKey || apiKey.trim().length === 0) {
-      setError("Please provide your OpenAI API key first");
+      const providerLabel = provider === "openai" ? "OpenAI" : "Gemini";
+      setError(`Please provide your ${providerLabel} API key first`);
       setShowApiKeyInput(true);
       return;
     }
