@@ -44,15 +44,15 @@ export default function LoginPage() {
         <div className="max-w-md space-y-8">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <Book className="h-10 w-10 text-[#13294B]" />
-            <span className="text-3xl font-bold text-[#13294B]">StudyBuddy</span>
+            <Book className="h-10 w-10 text-foreground" />
+            <span className="text-3xl font-bold text-foreground">StudyBuddy</span>
           </div>
           
-          <h2 className="text-2xl font-semibold text-gray-900">
+          <h2 className="text-2xl font-semibold text-foreground">
             Study Smarter, Together
           </h2>
           
-          <p className="text-gray-700 leading-relaxed text-base">
+          <p className="text-foreground/80 leading-relaxed text-base">
             Join UNC students in creating collaborative group chats, sharing resources, and using AI-powered tools to ace your classes.
           </p>
           
@@ -60,31 +60,31 @@ export default function LoginPage() {
           <div className="space-y-6 pt-2">
             <div className="flex items-start gap-3">
               <div className="mt-0.5 flex-shrink-0">
-                <Users className="h-6 w-6 text-[#13294B]" />
+                <Users className="h-6 w-6 text-foreground" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Course-Specific Groups</h3>
-                <p className="text-sm text-gray-600">Connect with classmates in your courses</p>
+                <h3 className="font-semibold text-foreground mb-1">Course-Specific Groups</h3>
+                <p className="text-sm text-muted-foreground">Connect with classmates in your courses</p>
               </div>
             </div>
             
             <div className="flex items-start gap-3">
               <div className="mt-0.5 flex-shrink-0">
-                <GraduationCap className="h-6 w-6 text-[#13294B]" />
+                <GraduationCap className="h-6 w-6 text-foreground" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 mb-1">AI Study Assistant</h3>
-                <p className="text-sm text-gray-600">Summarize notes and generate quiz questions</p>
+                <h3 className="font-semibold text-foreground mb-1">AI Study Assistant</h3>
+                <p className="text-sm text-muted-foreground">Summarize notes and generate quiz questions</p>
               </div>
             </div>
             
             <div className="flex items-start gap-3">
               <div className="mt-0.5 flex-shrink-0">
-                <MessageSquare className="h-6 w-6 text-[#13294B]" />
+                <MessageSquare className="h-6 w-6 text-foreground" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Real-Time Chat</h3>
-                <p className="text-sm text-gray-600">Discuss and collaborate with your group chats</p>
+                <h3 className="font-semibold text-foreground mb-1">Real-Time Chat</h3>
+                <p className="text-sm text-muted-foreground">Discuss and collaborate with your group chats</p>
               </div>
             </div>
           </div>
