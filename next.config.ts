@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  // Empty turbopack config to allow webpack config in Next.js 16
+  turbopack: {},
   typescript: {
     // Warning: This allows production builds to successfully complete even if
     // your project has type errors.
