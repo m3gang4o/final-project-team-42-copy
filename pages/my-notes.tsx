@@ -57,6 +57,7 @@ export default function MyNotesPage() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
 
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +87,32 @@ export default function MyNotesPage() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  useEffect(() => {
+    const handleRouteChange = () => {
+      fetchDocuments();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchDocuments();
+      }
+    };
+
+    const handleFocus = () => {
+      fetchDocuments();
+    };
+
+    router.events.on('routeChangeComplete', handleRouteChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [router]);
+
   const fetchDocuments = async () => {
     try {
       // Get current user
@@ -102,13 +129,28 @@ export default function MyNotesPage() {
       // Fetch user profile data
       const { data: userData, error: userError } = await supabase
         .from("users")
-        .select("name, email")
+        .select("name, email, avatar_url")
         .eq("id", userId)
         .single();
       
       if (!userError && userData) {
         setUserName(userData.name || "");
         setUserEmail(userData.email || "");
+        // Handle avatar URL - check if it's a full URL or a path
+        if (userData.avatar_url) {
+          if (userData.avatar_url.startsWith('http')) {
+            // Already a full URL
+            setUserAvatarUrl(userData.avatar_url);
+          } else {
+            // It's a path, get the public URL from group-files bucket
+            const { data: { publicUrl } } = supabase.storage
+              .from("group-files")
+              .getPublicUrl(userData.avatar_url);
+            setUserAvatarUrl(publicUrl);
+          }
+        } else {
+          setUserAvatarUrl(null);
+        }
       }
       
       // Fetch personal notes (group_id is null) for the current user
@@ -517,14 +559,24 @@ export default function MyNotesPage() {
           {!isSidebarCollapsed && (
             <div className="mt-auto p-4 border-t border-border">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm font-semibold text-muted-foreground">
-                    {userName ? userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'US'}
-                  </span>
-                </div>
+                <Avatar className="w-10 h-10 flex-shrink-0">
+                  <AvatarImage 
+                    src={userAvatarUrl || undefined} 
+                    className="object-cover"
+                  />
+                  <AvatarFallback className="bg-muted">
+                    <span className="text-sm font-semibold text-muted-foreground">
+                      {userName ? userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'US'}
+                    </span>
+                  </AvatarFallback>
+                </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{userName || 'User'}</p>
-                  <p className="text-xs text-muted-foreground truncate">{userEmail || 'user@example.com'}</p>
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {userName || 'User'}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {userEmail || 'user@example.com'}
+                  </p>
                 </div>
               </div>
             </div>
