@@ -1,89 +1,198 @@
 import { useState, useEffect } from "react";
+import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { createSupabaseComponentClient } from "@/utils/supabase/clients/component";
-
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ModeToggle } from "@/components/theme/mode-toggle";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
+import { createSupabaseComponentClient } from "@/utils/supabase/clients/component";
+import { createSupabaseServerClient } from "@/utils/supabase/clients/server-props";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import {
-  Book,
   ChevronRight,
-  Home,
-  PanelLeft,
-  Search,
-  Settings,
-  Sparkles,
+  Book,
   Users,
+  Home,
   FileText,
-  Plus,
-  Lock,
-  Unlock,
+  PanelLeft,
+  Settings,
+  PlusCircle,
 } from "lucide-react";
 
-export default function GroupsPage() {
-  const router = useRouter();
+import type { Subject } from "@/server/models/auth";
+import { GroupChat, GroupChatGroup } from "@/components/group-chat";
+
+type Group = {
+  id: number;
+  name: string;
+  description: string | null;
+  owner_id: number | null;
+  is_private: boolean | null;
+  join_code: string | null;
+  created_at: string;
+};
+
+type GroupsPageProps = {
+  user: Subject | null;
+  authorId: number | null;
+  userGroups: Group[];
+};
+
+export default function GroupsPage({
+  user,
+  authorId,
+  userGroups,
+}: GroupsPageProps) {
   const supabase = createSupabaseComponentClient();
+  const router = useRouter();
+
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [course, setCourse] = useState("");
   const [description, setDescription] = useState("");
+  const [groupImage, setGroupImage] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [userName, setUserName] = useState("User");
+  const [userEmail, setUserEmail] = useState("");
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
+
   const [isJoinGroupOpen, setIsJoinGroupOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
-  const [groupImagePreview, setGroupImagePreview] = useState<string | null>(null);
-  
-  
+  const [isJoining, setIsJoining] = useState(false);
 
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  type Group = {
-    id: number;
-    name: string;
-    description: string | null;
-    owner_id: number | null;
-    is_private: boolean | null;
-    join_code: string | null;
-    created_at: string;
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(
+    userGroups.length > 0 ? userGroups[0].id : null,
+  );
+
+  const selectedGroup: Group | null =
+    userGroups.find((g) => g.id === selectedGroupId) ??
+    groups.find((g) => g.id === selectedGroupId) ??
+    null;
+
+  const handleSelectGroup = (group: Group) => {
+    setSelectedGroupId(group.id);
   };
 
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+    const fetchUser = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
+      if (!user) {
+        setUserName("Guest");
+        setUserEmail("");
+        setUserAvatarUrl(null);
+        return;
+      }
+
+      // We store name & avatar in our own `users` table keyed by numeric id
+      const userId = user.id ? parseInt(user.id.substring(0, 8), 16) : 1;
+      setUserEmail(user.email || "");
+
+      if (userId) {
+        const { data: dbUser, error: dbError } = await supabase
+          .from("users")
+          .select("name, avatar_url")
+          .eq("id", userId)
+          .single();
+
+        if (!dbError && dbUser) {
+          const fallbackName =
+            user.user_metadata?.name ||
+            user.email?.split("@")[0] ||
+            "User";
+
+          setUserName(dbUser.name || fallbackName);
+
+          if (dbUser.avatar_url) {
+            if (dbUser.avatar_url.startsWith("http")) {
+              setUserAvatarUrl(dbUser.avatar_url);
+            } else {
+              const {
+                data: { publicUrl },
+              } = supabase.storage
+                .from("group-files")
+                .getPublicUrl(dbUser.avatar_url);
+              setUserAvatarUrl(publicUrl);
+            }
+          } else {
+            setUserAvatarUrl(null);
+          }
+        } else {
+          const name =
+            user.user_metadata?.name ||
+            user.email?.split("@")[0] ||
+            "User";
+          setUserName(name);
+          setUserAvatarUrl(null);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user:", error);
+    }
+  };
+
+  // initial load + keep user info fresh on route/visibility/focus
   useEffect(() => {
-    fetchGroups();
+    fetchUser();
 
-    const channel = supabase
-      .channel("groups-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "groups" },
-        () => fetchGroups()
-      )
-      .subscribe();
+    const handleRouteChange = () => {
+      fetchUser();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchUser();
+      }
+    };
+
+    const handleFocus = () => {
+      fetchUser();
+    };
+
+    router.events.on("routeChangeComplete", handleRouteChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
 
     return () => {
-      supabase.removeChannel(channel);
+      router.events.off("routeChangeComplete", handleRouteChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
     };
-  }, []);
+  }, [router, supabase]);
+
 
   const fetchGroups = async () => {
     try {
@@ -93,561 +202,565 @@ export default function GroupsPage() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setGroups((data || []) as Group[]);
-    } catch (error) {
-      console.error("Error fetching groups:", error);
-    } finally {
-      setLoading(false);
+      setGroups((data ?? []) as Group[]);
+    } catch (err) {
+      console.error("Error loading groups:", err);
     }
   };
+
+  useEffect(() => {
+    fetchGroups();
+
+    // realtime updates when new groups are created
+    const channel = supabase
+      .channel("groups-table-changes")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "groups" },
+        (payload) => {
+          const newGroup = payload.new as Group;
+          setGroups((prev) => {
+            const exists = prev.some((g) => g.id === newGroup.id);
+            return exists ? prev : [newGroup, ...prev];
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  });
+
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith("image/")) {
-        alert("Please select an image file");
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        alert("Image size must be less than 5MB");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setGroupImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    const file = e.target.files?.[0] ?? null;
+    setGroupImage(file);
   };
+
   const handleCreateGroup = async () => {
-    if (!groupName || !course || !description) return;
+    setErrorMessage(null);
+
+    if (!groupName.trim() || !course.trim()) {
+      setErrorMessage("Please provide both a group name and course.");
+      return;
+    }
+
+    if (!authorId) {
+      setErrorMessage("You must be logged in to create a group.");
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
-      // First, ensure we have a default user (for testing without auth)
-      const { data: existingUser } = await supabase
-        .from("users")
-        .select("id")
-        .eq("id", 1)
-        .single();
+      const joinCode = Math.random().toString(36).slice(2, 8).toUpperCase();
 
-      if (!existingUser) {
-        // Create default user if doesn't exist
-        await supabase.from("users").insert({
-          id: 1,
-          name: "Test User",
-          email: "test@example.com",
-        });
-      }
-
-      // Get current user ID
-      const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
-
-      // Create the group
+      // Note: groupImage is collected but not yet uploaded; that can be added later.
       const { data: newGroup, error: groupError } = await supabase
         .from("groups")
         .insert({
           name: `${course} - ${groupName}`,
-          description: description,
-          owner_id: userId,
+          description,
+          owner_id: authorId,
           is_private: false,
+          join_code: joinCode,
         })
         .select()
         .single();
 
       if (groupError) throw groupError;
 
-      // Automatically add the creator as a member
       if (newGroup) {
+        // Add creator as member
         const { error: membershipError } = await supabase
           .from("memberships")
           .insert({
-            user_id: userId,
             group_id: newGroup.id,
+            user_id: authorId,
           });
 
         if (membershipError) {
-          console.error("Error adding creator as member:", membershipError);
+          console.error("Error creating membership:", membershipError);
         }
+
+        setGroups((prev) => [newGroup as Group, ...prev]);
+        setSelectedGroupId(newGroup.id);
       }
 
-      // Refresh groups list
-      fetchGroups();
-
-      setIsCreateGroupOpen(false);
+      // reset and close dialog
       setGroupName("");
       setCourse("");
       setDescription("");
-      setGroupImagePreview(null);
-    } catch (error: unknown) {
-      console.error("Error creating group:", error);
-      alert(`Failed to create group: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+      setGroupImage(null);
+      setIsCreateGroupOpen(false);
+    } finally{
+      setIsSubmitting(false);
     }
   };
 
   const handleJoinGroup = async () => {
+    setErrorMessage(null);
+
     if (!joinCode.trim()) {
-      alert("Please enter a group ID");
+      setErrorMessage("Enter a join code.");
+      return;
+    }
+    if (!authorId) {
+      setErrorMessage("You must be logged in to join a group.");
       return;
     }
 
+    setIsJoining(true);
+
     try {
-      // Get current user ID
-      const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
-
-      // Parse group ID from join code
-      const groupId = parseInt(joinCode.trim());
-      
-      if (isNaN(groupId)) {
-        alert("Invalid group ID. Please enter a number.");
-        return;
-      }
-
-      // Check if group exists
       const { data: group, error: groupError } = await supabase
         .from("groups")
-        .select("id, name")
-        .eq("id", groupId)
-        .single();
+        .select("*")
+        .eq("join_code", joinCode.trim().toUpperCase())
+        .maybeSingle();
 
-      if (groupError || !group) {
-        alert("Group not found. Please check the group ID.");
+      if (groupError) throw groupError;
+      if (!group) {
+        setErrorMessage("No group found with that join code.");
         return;
       }
 
-      // Check if user is already a member
+      // ensure membership exists
       const { data: existingMembership } = await supabase
         .from("memberships")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("group_id", groupId)
-        .single();
+        .select("*")
+        .eq("group_id", group.id)
+        .eq("user_id", authorId)
+        .maybeSingle();
 
-      if (existingMembership) {
-        alert("You are already a member of this group!");
-        setIsJoinGroupOpen(false);
-        setJoinCode("");
-        return;
+      if (!existingMembership) {
+        const { error: membershipError } = await supabase
+          .from("memberships")
+          .insert({
+            group_id: group.id,
+            user_id: authorId,
+          });
+
+        if (membershipError) {
+          console.error("Error joining group:", membershipError);
+        }
       }
 
-      // Add user as a member
-      const { error: membershipError } = await supabase
-        .from("memberships")
-        .insert({
-          user_id: userId,
-          group_id: groupId,
-        });
+      setGroups((prev) => {
+        const exists = prev.some((g) => g.id === group.id);
+        return exists ? prev : [group as Group, ...prev];
+      });
+      setSelectedGroupId(group.id);
 
-      if (membershipError) throw membershipError;
-
-      alert(`Successfully joined "${group.name}"!`);
-      
-      // Refresh groups list
-      fetchGroups();
-      
-      setIsJoinGroupOpen(false);
       setJoinCode("");
-    } catch (error: unknown) {
-      console.error("Error joining group:", error);
-      alert(`Failed to join group: ${error instanceof Error ? error.message : "Unknown error"}`);
+      setIsJoinGroupOpen(false);
+    } finally {
+      setIsJoining(false);
     }
   };
 
-  const filteredGroups = groups.filter((group) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      group.name.toLowerCase().includes(q) ||
-      (group.description ?? "").toLowerCase().includes(q) ||
-      (group.join_code ?? "").toLowerCase().includes(q)
-    );
-  });
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
-  };
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="min-h-screen flex bg-gray-50">
+      {/* Sidebar */}
       <aside className="fixed left-0 top-0 h-screen flex flex-col transition-all duration-300 z-50">
-        <Collapsible
-          open={!isSidebarCollapsed}
-          onOpenChange={(open: boolean) => setIsSidebarCollapsed(!open)}
-          className={`${
-            isSidebarCollapsed ? "w-16" : "w-64"
-          } h-full bg-card border-r border-border flex flex-col`}
-        >
-          <div className="absolute right-4 top-6 z-10">
-            <CollapsibleTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 p-0 bg-card border border-border"
-                title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              <Collapsible
+                open={!isSidebarCollapsed}
+                onOpenChange={(open: boolean) => setIsSidebarCollapsed(!open)}
+                className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} h-full bg-card border-r border-border flex flex-col`}
               >
-                {isSidebarCollapsed ? (
-                  <ChevronRight className="h-4 w-4" />
-                ) : (
-                  <PanelLeft className="h-4 w-4" />
-                )}
-                <span className="sr-only">Toggle sidebar</span>
-              </Button>
-            </CollapsibleTrigger>
-          </div>
+                {/* Collapse Trigger */}
+                <div className="absolute right-4 top-6 z-10">
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 p-0 bg-card border border-border"
+                      title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    >
+                      {isSidebarCollapsed ? (
+                        <ChevronRight className="h-4 w-4" />
+                      ) : (
+                        <PanelLeft className="h-4 w-4" />
+                      )}
+                      <span className="sr-only">Toggle sidebar</span>
+                    </Button>
+                  </CollapsibleTrigger>
+                </div>
+      
+                <CollapsibleContent className="flex-1 flex flex-col h-full">
+                  <div>
+                    {/* Logo */}
+                    <div className="p-6 border-b border-border">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-[#4B9CD3] rounded flex items-center justify-center flex-shrink-0">
+                          <Book className="h-5 w-5 text-white" />
+                        </div>
+                        <span className="text-xl font-bold text-foreground whitespace-nowrap">StudyBuddy</span>
+                      </div>
+                    </div>
+      
+                    {/* Menu */}
+                    <nav className="p-4 space-y-6">
+                      <div>
+                        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                          Menu
+                        </h3>
+                        <ul className="space-y-1">
+                          <li>
+                            <button
+                              onClick={() => router.push("/dashboard")}
+                              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-accent transition-colors "
+                              title="Dashboard"
+                            >
+                              <Home className="h-5 w-5 flex-shrink-0" />
+                              <span>Dashboard</span>
+                            </button>
+                          </li>
+                          <li>
+                            <button
+                              onClick={() => router.push("/study-groups")}
+                              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-accent text-foreground font-medium"
+                              title="Group Chats"
+                            >
+                              <Users className="h-5 w-5 flex-shrink-0" />
+                              <span>Group Chats</span>
+                            </button>
+                          </li>
+                         
+                          <li>
+                            <button
+                              onClick={() => router.push("/my-notes")}
+                              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-accent transition-colors"
+                              title="My Notes"
+                            >
+                              <FileText className="h-5 w-5 flex-shrink-0" />
+                              <span>My Notes</span>
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+      
+                      {/* Account */}
+                      <div>
+                        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                          Account
+                        </h3>
+                        <ul className="space-y-1">
+                          <li>
+                            <button
+                              onClick={() => router.push("/settings")}
+                              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-accent transition-colors"
+                              title="Settings"
+                            >
+                              <Settings className="h-5 w-5 flex-shrink-0" />
+                              <span>Settings</span>
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+                    </nav>
+                  </div>
+      
+                  <div className="mt-auto p-4 border-t border-border">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-10 h-10 flex-shrink-0">
+                        <AvatarImage 
+                          src={userAvatarUrl || undefined} 
+                          className="object-cover"
+                        />
+                        <AvatarFallback className="bg-muted">
+                          <span className="text-sm font-semibold text-muted-foreground">
+                            {userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                          </span>
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {userName}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {userEmail}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </aside>
 
-          <CollapsibleContent className="flex-1 flex flex-col h-full">
+      {/* Main content */}
+      <div className="flex-1 ml-16 md:ml-64">
+        <header className="border-b border-gray-200 bg-white">
+          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
             <div>
-              <div className="p-6 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-[#4B9CD3] rounded flex items-center justify-center flex-shrink-0">
-                    <Book className="h-5 w-5 text-white" />
-                  </div>
-                  {!isSidebarCollapsed && (
-                    <span className="text-xl font-bold text-foreground whitespace-nowrap">
-                      StudyBuddy
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <nav className="p-4 space-y-6">
-                <div>
-                  <h3
-                    className={`${
-                      isSidebarCollapsed ? "hidden" : "block"
-                    } text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3`}
-                  >
-                    Menu
-                  </h3>
-                  <ul className="space-y-1">
-                    <li>
-                      <button
-                        onClick={() => router.push("/dashboard")}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-accent transition-colors"
-                        title="Dashboard"
-                      >
-                        <Home className="h-5 w-5 flex-shrink-0" />
-                        {!isSidebarCollapsed && <span>Dashboard</span>}
-                      </button>
-                    </li>
-                    <li>
-                      <button
-                        onClick={() => router.push("/study-groups")}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-accent text-foreground font-medium"
-                        title="Group Chats"
-                      >
-                        <Users className="h-5 w-5 flex-shrink-0" />
-                        <span>Group Chats</span>
-                      </button>
-                    </li>
-                   
-                    <li>
-                      <button
-                        onClick={() => router.push("/my-notes")}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-accent transition-colors"
-                        title="My Notes"
-                      >
-                        <FileText className="h-5 w-5 flex-shrink-0" />
-                        {!isSidebarCollapsed && <span>My Notes</span>}
-                      </button>
-                    </li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h3
-                    className={`${
-                      isSidebarCollapsed ? "hidden" : "block"
-                    } text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3`}
-                  >
-                    Account
-                  </h3>
-                  <ul className="space-y-1">
-                    <li>
-                      <button
-                        onClick={() => router.push("/settings")}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-accent transition-colors"
-                        title="Settings"
-                      >
-                        <Settings className="h-5 w-5 flex-shrink-0" />
-                        {!isSidebarCollapsed && <span>Settings</span>}
-                      </button>
-                    </li>
-                  </ul>
-                </div>
-              </nav>
-            </div>
-
-            {!isSidebarCollapsed && (
-              <div className="mt-auto p-4 border-t border-border">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-semibold text-muted-foreground">
-                      {userName
-                        ? userName
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .toUpperCase()
-                            .slice(0, 2)
-                        : "US"}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {userName || "User"}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {userEmail || "user@example.com"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </CollapsibleContent>
-        </Collapsible>
-      </aside>
-
-      <div
-        className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${
-          isSidebarCollapsed ? "ml-16" : "ml-64"
-        }`}
-      >
-        <div className="bg-card border-b border-border p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Group Chats</h1>
-              <p className="text-sm text-muted-foreground">
-                Find a group to join or create your own.
+              <h1 className="text-2xl font-bold text-gray-900">Group Chats</h1>
+              <p className="text-sm text-gray-600">
+                Real-time discussions with your study groups.
               </p>
             </div>
-             <div className="flex gap-3">
-                <ModeToggle />
-                <Button
-                  onClick={() => setIsCreateGroupOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+            <div className="flex items-center gap-3">
+              {groups.length > 0 && (
+                <Select
+                  value={selectedGroupId ? String(selectedGroupId) : undefined}
+                  onValueChange={(value) => {
+                    const id = Number(value);
+                    const group =
+                      userGroups.find((g) => g.id === id);
+                    if (group) handleSelectGroup(group);
+                  }}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Group
-                </Button>
-                <Button
-                  onClick={() => setIsJoinGroupOpen(true)}
-                  variant="outline"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Join Group
-                </Button>
+                  <SelectTrigger className="w-56">
+                    <SelectValue placeholder="Select a group" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {userGroups.map((g) => (
+                      <SelectItem key={g.id} value={String(g.id)}>
+                        {g.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              <Button
+                onClick={() => setIsCreateGroupOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Create Group
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsJoinGroupOpen(true)}
+                className="border-gray-300 text-black"
+              >
+                Join Group
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-6xl mx-auto px-6 py-6 space-y-6">
+          {/* Active group chat */}
+          <section>
+            {selectedGroup ? (
+              <GroupChat
+                group={selectedGroup as GroupChatGroup}
+                user={user}
+                authorId={authorId}
+              />
+            ) : (
+              <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 text-sm text-gray-600">
+                Select a group from the dropdown above, or join/create one to
+                start chatting.
+              </div>
+            )}
+          </section>
+
+        </main>
+      </div>
+
+      {/* Create Group Dialog */}
+      <Dialog open={isCreateGroupOpen} onOpenChange={setIsCreateGroupOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create a new Study Group</DialogTitle>
+            <DialogDescription>
+              Set up a group for your class so classmates can collaborate.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {errorMessage && (
+              <p className="text-sm text-red-600">{errorMessage}</p>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="group-name">Group name</Label>
+              <Input
+                id="group-name"
+                placeholder="e.g., Study Squad"
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="course">Course</Label>
+              <Input
+                id="course"
+                placeholder="e.g., COMP 110"
+                value={course}
+                onChange={(e) => setCourse(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Brief description of the group"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="group-image">Group image (optional)</Label>
+              <Input
+                id="group-image"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+              />
+              {groupImage && (
+                <p className="text-xs text-gray-500">
+                  Selected: {groupImage.name}
+                </p>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateGroupOpen(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateGroup}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Creating..." : "Create Group"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Join Group Dialog */}
+      <Dialog open={isJoinGroupOpen} onOpenChange={setIsJoinGroupOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Join a group</DialogTitle>
+            <DialogDescription>
+              Enter the join code shared with you to become a member.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {errorMessage && (
+              <p className="text-sm text-red-600">{errorMessage}</p>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="join-code">Join code</Label>
               <Input
-                placeholder="Filter groups by name or description..."
-                value={searchQuery}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setSearchQuery(e.target.value)
-                }
-                className="pl-10"
+                id="join-code"
+                placeholder="e.g., ABC123"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
               />
             </div>
           </div>
-        </div>
 
-        <div className="flex-1 overflow-auto p-6">
-          {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-            </div>
-          ) : filteredGroups.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-center">
-              <Users className="h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">
-                No groups found
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                {searchQuery
-                  ? "Try adjusting your filter."
-                  : "Create your first Group Chat to get started."}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredGroups.map((group) => (
-                <Card
-                  key={group.id}
-                  onClick={() => router.push(`/groups/${group.id}`)}
-                  className="hover:shadow-lg transition-shadow cursor-pointer group bg-card border-border"
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-foreground" />
-                          <span className="font-medium text-sm truncate max-w-[200px] text-foreground">
-                            {group.name}
-                          </span>
-                        </div>
-                        {group.description && (
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {group.description}
-                          </p>
-                        )}
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className="text-[11px] flex items-center gap-1"
-                      >
-                        {group.is_private ? (
-                          <>
-                            <Lock className="h-3 w-3" />
-                            Private
-                          </>
-                        ) : (
-                          <>
-                            <Unlock className="h-3 w-3" />
-                            Public
-                          </>
-                        )}
-                      </Badge>
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <div className="flex flex-col">
-                          <span className="mt-1">
-                          Created {formatDate(group.created_at)}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-      <Dialog open={isCreateGroupOpen} onOpenChange={setIsCreateGroupOpen}>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Create Group Chat</DialogTitle>
-                  <DialogDescription>
-                    Start a new group chat for your course
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="group-name">Group Name</Label>
-                    <Input
-                      id="group-name"
-                      placeholder="e.g., COMP 110 Group Chat"
-                      value={groupName}
-                      onChange={(e) => setGroupName(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="course">Course</Label>
-                    <Input
-                      id="course"
-                      placeholder="e.g., COMP 110"
-                      value={course}
-                      onChange={(e) => setCourse(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      placeholder="Brief description of the group"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      rows={4}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="group-image">Group Image (Optional)</Label>
-                    <Input
-                      id="group-image"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="cursor-pointer"
-                    />
-                    {groupImagePreview && (
-                      <div className="mt-2">
-                        <img
-                          src={groupImagePreview}
-                          alt="Group preview"
-                          className="w-24 h-24 object-cover rounded-lg border border-gray-200"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                </div>
-
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setIsCreateGroupOpen(false);
-                      setGroupName("");
-                      setCourse("");
-                      setDescription("");
-                      setGroupImagePreview(null);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleCreateGroup}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                    disabled={!groupName || !course || !description}
-                  >
-                    Create Group
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-      
-            {/* Join Group Overlay */}
-            <Dialog open={isJoinGroupOpen} onOpenChange={setIsJoinGroupOpen}>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Join a Group Chat</DialogTitle>
-                  <DialogDescription>
-                    Join a group chat for your course
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="join-code">Join Code</Label>
-                    <Input
-                      id="join-code"
-                      placeholder="Enter join code"
-                      value={joinCode}
-                      onChange={(e) => setJoinCode(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsJoinGroupOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleJoinGroup}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                    disabled={!joinCode}
-                  >
-                    Join Group
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsJoinGroupOpen(false)}
+              disabled={isJoining}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleJoinGroup}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={!joinCode || isJoining}
+            >
+              {isJoining ? "Joining..." : "Join Group"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+export const getServerSideProps: GetServerSideProps<GroupsPageProps> = async (
+  context,
+) => {
+  const supabase = createSupabaseServerClient(context);
+
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.getUser();
+
+  let subject: Subject | null = null;
+  let authorId: number | null = null;
+  let userGroups: Group[] = [];
+
+  type MembershipRow = {
+    group: Group | Group[] | null;
+  };
+
+  if (authUser) {
+    subject = { id: authUser.id } as Subject;
+
+    if (authUser.email) {
+      const { data: dbUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("email", authUser.email)
+        .maybeSingle();
+
+      if (dbUser?.id != null) {
+        authorId = dbUser.id;
+      }
+    }
+
+    if (authorId != null) {
+      const { data: memberships, error: membershipsError } = await supabase
+        .from("memberships")
+        .select(
+          `
+          group:groups!memberships_group_id_fkey (
+            id,
+            name,
+            description,
+            owner_id,
+            is_private,
+            join_code,
+            created_at
+          )
+        `,
+        )
+        .eq("user_id", authorId);
+
+      if (!membershipsError && memberships) {
+        const membershipRows = memberships as unknown as MembershipRow[];
+
+        userGroups = membershipRows
+          .map((row) => {
+            if (!row.group) return null;
+
+            const group = Array.isArray(row.group) ? row.group[0] : row.group;
+            return group ?? null;
+          })
+          .filter((group): group is Group => group !== null);
+      }
+    }
+  }
+
+  return {
+    props: {
+      user: subject,
+      authorId,
+      userGroups,
+    },
+  };
+};

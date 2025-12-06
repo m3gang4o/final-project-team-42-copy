@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import { createSupabaseComponentClient } from "@/utils/supabase/clients/component";
-import { Book, Home, Users, Sparkles, MessageSquare, FileText, Settings, Upload, LogOut, User, Mail, Save, X, PanelLeft, ChevronRight } from "lucide-react";
+import { Book, Home, Users, FileText, Settings, Upload, LogOut, User, Mail, Save, X, PanelLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -302,16 +302,7 @@ export default function SettingsPage() {
                         {!isSidebarCollapsed && <span>Study Groups</span>}
                       </button>
                     </li>
-                    <li>
-                      <button
-                        onClick={() => router.push("/group-chat")}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-accent transition-colors"
-                        title="Group Chat"
-                      >
-                        <MessageSquare className="h-5 w-5 flex-shrink-0" />
-                        {!isSidebarCollapsed && <span>Group Chat</span>}
-                      </button>
-                    </li>
+                    
                     <li>
                       <button
                         onClick={() => router.push("/my-notes")}

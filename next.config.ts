@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -18,8 +17,10 @@ const nextConfig: NextConfig = {
     if (!isServer) {
       config.resolve.alias.canvas = false;
       config.resolve.alias.encoding = false;
-      config.resolve.alias["pdfjs-dist/legacy/build/pdf.js"] = "pdfjs-dist/legacy/build/pdf.js";
-      config.resolve.alias["pdfjs-dist/build/pdf.js"] = "pdfjs-dist/build/pdf.js";
+      config.resolve.alias["pdfjs-dist/legacy/build/pdf.js"] =
+        "pdfjs-dist/legacy/build/pdf.js";
+      config.resolve.alias["pdfjs-dist/build/pdf.js"] =
+        "pdfjs-dist/build/pdf.js";
       config.resolve.alias["pdfjs-dist/legacy/build/pdf.worker.js"] =
         "pdfjs-dist/legacy/build/pdf.worker.min.js";
       config.resolve.alias["pdfjs-dist/build/pdf.worker.js"] =
@@ -62,7 +63,6 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-=======
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -82,8 +82,10 @@ const nextConfig: NextConfig = {
     if (!isServer) {
       config.resolve.alias.canvas = false;
       config.resolve.alias.encoding = false;
-      config.resolve.alias["pdfjs-dist/legacy/build/pdf.js"] = "pdfjs-dist/legacy/build/pdf.js";
-      config.resolve.alias["pdfjs-dist/build/pdf.js"] = "pdfjs-dist/build/pdf.js";
+      config.resolve.alias["pdfjs-dist/legacy/build/pdf.js"] =
+        "pdfjs-dist/legacy/build/pdf.js";
+      config.resolve.alias["pdfjs-dist/build/pdf.js"] =
+        "pdfjs-dist/build/pdf.js";
       config.resolve.alias["pdfjs-dist/legacy/build/pdf.worker.js"] =
         "pdfjs-dist/legacy/build/pdf.worker.min.js";
       config.resolve.alias["pdfjs-dist/build/pdf.worker.js"] =
@@ -126,4 +128,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
->>>>>>> 2f2403c (updated pdf feature to work)
