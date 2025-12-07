@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
+import Head from "next/head";
 import {
   FileText,
   Upload,
@@ -535,668 +536,706 @@ export default function MyNotesPage() {
   };
 
   return (
-    <div className="bg-background flex min-h-screen">
-      <aside className="fixed top-0 left-0 z-50 flex h-screen flex-col transition-all duration-300">
-        <Collapsible
-          open={!isSidebarCollapsed}
-          onOpenChange={(open: boolean) => setIsSidebarCollapsed(!open)}
-          className={`${isSidebarCollapsed ? "w-16" : "w-64"} bg-card border-border flex h-full flex-col border-r`}
+    <>
+      <Head>
+        <title>My Notes - StudyBuddy</title>
+        <meta
+          name="description"
+          content="Organize and manage your study notes, documents, and files. Share with study groups and use AI-powered tools to enhance your learning."
+        />
+      </Head>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded focus:bg-blue-600 focus:px-4 focus:py-2 focus:text-white"
+      >
+        Skip to main content
+      </a>
+      <div className="bg-background flex min-h-screen">
+        <aside className="fixed top-0 left-0 z-50 flex h-screen flex-col transition-all duration-300">
+          <Collapsible
+            open={!isSidebarCollapsed}
+            onOpenChange={(open: boolean) => setIsSidebarCollapsed(!open)}
+            className={`${isSidebarCollapsed ? "w-16" : "w-64"} bg-card border-border flex h-full flex-col border-r`}
+          >
+            {/* Collapse Trigger */}
+            <div className="absolute top-6 right-4 z-10">
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="bg-card border-border h-8 w-8 border p-0"
+                  title={
+                    isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
+                  }
+                >
+                  {isSidebarCollapsed ? (
+                    <ChevronRight className="h-4 w-4" />
+                  ) : (
+                    <PanelLeft className="h-4 w-4" />
+                  )}
+                  <span className="sr-only">
+                    {isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                  </span>
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+
+            <CollapsibleContent className="flex h-full flex-1 flex-col">
+              <div>
+                {/* Logo */}
+                <div className="border-border border-b p-6">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded bg-[#4B9CD3]">
+                      <Book className="h-5 w-5 text-white" />
+                    </div>
+                    {!isSidebarCollapsed && (
+                      <span className="text-foreground text-xl font-bold whitespace-nowrap">
+                        StudyBuddy
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Menu */}
+                <nav className="space-y-6 p-4">
+                  <div>
+                    <h3
+                      className={`${isSidebarCollapsed ? "hidden" : "block"} text-muted-foreground mb-3 text-xs font-semibold tracking-wider uppercase`}
+                    >
+                      Menu
+                    </h3>
+                    <ul className="space-y-1">
+                      <li>
+                        <button
+                          onClick={() => router.push("/dashboard")}
+                          className="text-foreground hover:bg-accent flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors"
+                          title="Dashboard"
+                        >
+                          <Home className="h-5 w-5 flex-shrink-0" />
+                          {!isSidebarCollapsed && <span>Dashboard</span>}
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          onClick={() => router.push("/study-groups")}
+                          className="text-foreground hover:bg-accent flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors"
+                          title="Group Chats"
+                        >
+                          <Users className="h-5 w-5 flex-shrink-0" />
+                          {!isSidebarCollapsed && <span>Group Chats</span>}
+                        </button>
+                      </li>
+
+                      <li>
+                        <button
+                          onClick={() => router.push("/my-notes")}
+                          className="bg-accent text-foreground flex w-full items-center gap-3 rounded-lg px-3 py-2 font-medium"
+                          title="My Notes"
+                        >
+                          <FileText className="h-5 w-5 flex-shrink-0" />
+                          {!isSidebarCollapsed && <span>My Notes</span>}
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Account */}
+                  <div>
+                    <h3
+                      className={`${isSidebarCollapsed ? "hidden" : "block"} text-muted-foreground mb-3 text-xs font-semibold tracking-wider uppercase`}
+                    >
+                      Account
+                    </h3>
+                    <ul className="space-y-1">
+                      <li>
+                        <button
+                          onClick={() => router.push("/settings")}
+                          className="text-foreground hover:bg-accent flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors"
+                          title="Settings"
+                        >
+                          <Settings className="h-5 w-5 flex-shrink-0" />
+                          {!isSidebarCollapsed && <span>Settings</span>}
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </nav>
+              </div>
+
+              {!isSidebarCollapsed && (
+                <div className="border-border mt-auto border-t p-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10 flex-shrink-0">
+                      <AvatarImage
+                        src={userAvatarUrl || undefined}
+                        className="object-cover"
+                      />
+                      <AvatarFallback className="bg-muted">
+                        <span className="text-muted-foreground text-sm font-semibold">
+                          {userName
+                            ? userName
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                                .toUpperCase()
+                                .slice(0, 2)
+                            : "US"}
+                        </span>
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-foreground truncate text-sm font-medium">
+                        {userName || "User"}
+                      </p>
+                      <p className="text-muted-foreground truncate text-xs">
+                        {userEmail || "user@example.com"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        </aside>
+
+        {/* Main Content */}
+        <main
+          id="main-content"
+          className={`flex flex-1 flex-col overflow-hidden transition-all duration-300 ${isSidebarCollapsed ? "ml-16" : "ml-64"}`}
         >
-          {/* Collapse Trigger */}
-          <div className="absolute top-6 right-4 z-10">
-            <CollapsibleTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="bg-card border-border h-8 w-8 border p-0"
-                title={
-                  isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
-                }
-              >
-                {isSidebarCollapsed ? (
-                  <ChevronRight className="h-4 w-4" />
-                ) : (
-                  <PanelLeft className="h-4 w-4" />
-                )}
-                <span className="sr-only">Toggle sidebar</span>
-              </Button>
-            </CollapsibleTrigger>
+          {/* Header */}
+          <div className="bg-card border-border border-b p-4">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h1 className="text-foreground text-2xl font-bold">
+                  My Documents
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  Organize and share your study materials
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <ModeToggle />
+                <AIStudyHelper />
+                <Button onClick={() => setIsNewDocOpen(true)} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  New Document
+                </Button>
+              </div>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Input
+                  placeholder="Search documents..."
+                  value={searchQuery}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setSearchQuery(e.target.value)
+                  }
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={viewMode === "grid" ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setViewMode("grid")}
+                  aria-label="Grid view"
+                >
+                  <Grid className="h-4 w-4" aria-hidden="true" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setViewMode("list")}
+                  aria-label="List view"
+                >
+                  <List className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </div>
+            </div>
           </div>
 
-          <CollapsibleContent className="flex h-full flex-1 flex-col">
-            <div>
-              {/* Logo */}
-              <div className="border-border border-b p-6">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded bg-[#4B9CD3]">
-                    <Book className="h-5 w-5 text-white" />
-                  </div>
-                  {!isSidebarCollapsed && (
-                    <span className="text-foreground text-xl font-bold whitespace-nowrap">
-                      StudyBuddy
-                    </span>
+          {/* Tabs */}
+          <Tabs
+            value={filterType}
+            onValueChange={(v: string) => setFilterType(v as FilterType)}
+            className="flex flex-1 flex-col"
+          >
+            <div className="bg-card border-border border-b px-4">
+              <TabsList className="bg-transparent">
+                <TabsTrigger value="all">All Documents</TabsTrigger>
+                <TabsTrigger value="personal">Personal</TabsTrigger>
+                <TabsTrigger value="shared">Shared</TabsTrigger>
+                <TabsTrigger value="recent">Recent</TabsTrigger>
+              </TabsList>
+            </div>
+
+            <TabsContent
+              value={filterType}
+              className="mt-0 flex-1 overflow-auto p-6"
+            >
+              {loading ? (
+                <div className="flex h-64 items-center justify-center">
+                  <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
+                </div>
+              ) : filteredDocuments.length === 0 ? (
+                <div className="flex h-64 flex-col items-center justify-center text-center">
+                  <FileText className="text-muted-foreground mb-4 h-16 w-16" />
+                  <h3 className="text-foreground mb-2 text-lg font-semibold">
+                    No documents found
+                  </h3>
+                  <p className="text-muted-foreground mb-4">
+                    {searchQuery
+                      ? "Try adjusting your search"
+                      : "Create your first document to get started"}
+                  </p>
+                  {!searchQuery && (
+                    <Button
+                      onClick={() => setIsNewDocOpen(true)}
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      New Document
+                    </Button>
                   )}
                 </div>
-              </div>
-
-              {/* Menu */}
-              <nav className="space-y-6 p-4">
-                <div>
-                  <h3
-                    className={`${isSidebarCollapsed ? "hidden" : "block"} text-muted-foreground mb-3 text-xs font-semibold tracking-wider uppercase`}
-                  >
-                    Menu
-                  </h3>
-                  <ul className="space-y-1">
-                    <li>
-                      <button
-                        onClick={() => router.push("/dashboard")}
-                        className="text-foreground hover:bg-accent flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors"
-                        title="Dashboard"
-                      >
-                        <Home className="h-5 w-5 flex-shrink-0" />
-                        {!isSidebarCollapsed && <span>Dashboard</span>}
-                      </button>
-                    </li>
-                    <li>
-                      <button
-                        onClick={() => router.push("/study-groups")}
-                        className="text-foreground hover:bg-accent flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors"
-                        title="Group Chats"
-                      >
-                        <Users className="h-5 w-5 flex-shrink-0" />
-                        {!isSidebarCollapsed && <span>Group Chats</span>}
-                      </button>
-                    </li>
-
-                    <li>
-                      <button
-                        onClick={() => router.push("/my-notes")}
-                        className="bg-accent text-foreground flex w-full items-center gap-3 rounded-lg px-3 py-2 font-medium"
-                        title="My Notes"
-                      >
-                        <FileText className="h-5 w-5 flex-shrink-0" />
-                        {!isSidebarCollapsed && <span>My Notes</span>}
-                      </button>
-                    </li>
-                  </ul>
-                </div>
-
-                {/* Account */}
-                <div>
-                  <h3
-                    className={`${isSidebarCollapsed ? "hidden" : "block"} text-muted-foreground mb-3 text-xs font-semibold tracking-wider uppercase`}
-                  >
-                    Account
-                  </h3>
-                  <ul className="space-y-1">
-                    <li>
-                      <button
-                        onClick={() => router.push("/settings")}
-                        className="text-foreground hover:bg-accent flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors"
-                        title="Settings"
-                      >
-                        <Settings className="h-5 w-5 flex-shrink-0" />
-                        {!isSidebarCollapsed && <span>Settings</span>}
-                      </button>
-                    </li>
-                  </ul>
-                </div>
-              </nav>
-            </div>
-
-            {!isSidebarCollapsed && (
-              <div className="border-border mt-auto border-t p-4">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10 flex-shrink-0">
-                    <AvatarImage
-                      src={userAvatarUrl || undefined}
-                      className="object-cover"
-                    />
-                    <AvatarFallback className="bg-muted">
-                      <span className="text-muted-foreground text-sm font-semibold">
-                        {userName
-                          ? userName
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .toUpperCase()
-                              .slice(0, 2)
-                          : "US"}
-                      </span>
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-foreground truncate text-sm font-medium">
-                      {userName || "User"}
-                    </p>
-                    <p className="text-muted-foreground truncate text-xs">
-                      {userEmail || "user@example.com"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </CollapsibleContent>
-        </Collapsible>
-      </aside>
-
-      {/* Main Content */}
-      <div
-        className={`flex flex-1 flex-col overflow-hidden transition-all duration-300 ${isSidebarCollapsed ? "ml-16" : "ml-64"}`}
-      >
-        {/* Header */}
-        <div className="bg-card border-border border-b p-4">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h1 className="text-foreground text-2xl font-bold">
-                My Documents
-              </h1>
-              <p className="text-muted-foreground text-sm">
-                Organize and share your study materials
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <ModeToggle />
-              <AIStudyHelper />
-              <Button onClick={() => setIsNewDocOpen(true)} className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Document
-              </Button>
-            </div>
-          </div>
-
-          {/* Search and Filters */}
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <Input
-                placeholder="Search documents..."
-                value={searchQuery}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setSearchQuery(e.target.value)
-                }
-                className="pl-10"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant={viewMode === "grid" ? "default" : "outline"}
-                size="icon"
-                onClick={() => setViewMode("grid")}
-              >
-                <Grid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "outline"}
-                size="icon"
-                onClick={() => setViewMode("list")}
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <Tabs
-          value={filterType}
-          onValueChange={(v: string) => setFilterType(v as FilterType)}
-          className="flex flex-1 flex-col"
-        >
-          <div className="bg-card border-border border-b px-4">
-            <TabsList className="bg-transparent">
-              <TabsTrigger value="all">All Documents</TabsTrigger>
-              <TabsTrigger value="personal">Personal</TabsTrigger>
-              <TabsTrigger value="shared">Shared</TabsTrigger>
-              <TabsTrigger value="recent">Recent</TabsTrigger>
-            </TabsList>
-          </div>
-
-          <TabsContent
-            value={filterType}
-            className="mt-0 flex-1 overflow-auto p-6"
-          >
-            {loading ? (
-              <div className="flex h-64 items-center justify-center">
-                <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
-              </div>
-            ) : filteredDocuments.length === 0 ? (
-              <div className="flex h-64 flex-col items-center justify-center text-center">
-                <FileText className="text-muted-foreground mb-4 h-16 w-16" />
-                <h3 className="text-foreground mb-2 text-lg font-semibold">
-                  No documents found
-                </h3>
-                <p className="text-muted-foreground mb-4">
-                  {searchQuery
-                    ? "Try adjusting your search"
-                    : "Create your first document to get started"}
-                </p>
-                {!searchQuery && (
-                  <Button
-                    onClick={() => setIsNewDocOpen(true)}
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    New Document
-                  </Button>
-                )}
-              </div>
-            ) : viewMode === "grid" ? (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredDocuments.map((doc) => (
-                  <Card
-                    key={doc.id}
-                    className="group bg-card border-border cursor-pointer transition-shadow hover:shadow-lg"
-                  >
-                    <CardContent className="p-4">
-                      <div className="mb-3 flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          {getFileIcon(doc.file_type || null)}
-                          <span className="text-foreground max-w-[150px] truncate text-sm font-medium">
-                            {doc.title}
-                          </span>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 opacity-0 group-hover:opacity-100"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setDocumentToView(doc);
-                                setIsViewContentOpen(true);
-                              }}
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Content
-                            </DropdownMenuItem>
-                            {doc.attachment_url && (
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  window.open(doc.attachment_url!, "_blank")
-                                }
+              ) : viewMode === "grid" ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {filteredDocuments.map((doc) => (
+                    <Card
+                      key={doc.id}
+                      className="group bg-card border-border cursor-pointer transition-shadow hover:shadow-lg"
+                    >
+                      <CardContent className="p-4">
+                        <div className="mb-3 flex items-start justify-between">
+                          <div className="flex items-center gap-2">
+                            {getFileIcon(doc.file_type || null)}
+                            <span className="text-foreground max-w-[150px] truncate text-sm font-medium">
+                              {doc.title}
+                            </span>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 opacity-0 group-hover:opacity-100"
+                                aria-label="Document options"
                               >
-                                <Download className="mr-2 h-4 w-4" />
-                                Download Attachment
+                                <MoreVertical
+                                  className="h-4 w-4"
+                                  aria-hidden="true"
+                                />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setDocumentToView(doc);
+                                  setIsViewContentOpen(true);
+                                }}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Content
                               </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setDocumentToShare(doc);
-                                setIsShareDialogOpen(true);
-                              }}
-                            >
-                              <Share2 className="mr-2 h-4 w-4" />
-                              Share to Group
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteDocument(doc.id)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-
-                      {doc.attachment_url && doc.file_type === "image" && (
-                        <div className="bg-muted mb-3 overflow-hidden rounded-lg">
-                          <img
-                            src={doc.attachment_url}
-                            alt={doc.title}
-                            className="h-32 w-full object-cover"
-                          />
+                              {doc.attachment_url && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    window.open(doc.attachment_url!, "_blank")
+                                  }
+                                >
+                                  <Download className="mr-2 h-4 w-4" />
+                                  Download Attachment
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setDocumentToShare(doc);
+                                  setIsShareDialogOpen(true);
+                                }}
+                              >
+                                <Share2 className="mr-2 h-4 w-4" />
+                                Share to Group
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteDocument(doc.id)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
-                      )}
 
-                      {doc.message && doc.message !== doc.title && (
-                        <p className="text-muted-foreground mb-3 line-clamp-2 text-sm">
-                          {doc.message}
-                        </p>
-                      )}
-
-                      <div className="text-muted-foreground flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-1">
-                          <Avatar className="h-5 w-5">
-                            <AvatarImage
-                              src={doc.author?.avatar_url || undefined}
+                        {doc.attachment_url && doc.file_type === "image" && (
+                          <div className="bg-muted mb-3 overflow-hidden rounded-lg">
+                            <img
+                              src={doc.attachment_url}
+                              alt={`${doc.title} document`}
+                              className="h-32 w-full object-cover"
                             />
-                            <AvatarFallback className="text-xs">
-                              {doc.author?.name?.charAt(0).toUpperCase() || "U"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span>{doc.author?.name || "Unknown"}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{formatDate(doc.created_at)}</span>
-                        </div>
-                      </div>
+                          </div>
+                        )}
 
-                      {doc.group && (
-                        <div className="mt-2 flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
-                          <Folder className="h-3 w-3" />
-                          <span>{doc.group.name}</span>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {filteredDocuments.map((doc) => (
-                  <Card
-                    key={doc.id}
-                    className="hover:bg-accent bg-card border-border cursor-pointer transition-colors"
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-4">
-                        <div className="flex-shrink-0">
-                          {getFileIcon(doc.file_type || null)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-foreground truncate text-sm font-medium">
-                            {doc.title}
-                          </h3>
-                          <div className="text-muted-foreground mt-1 flex items-center gap-4 text-xs">
+                        {doc.message && doc.message !== doc.title && (
+                          <p className="text-muted-foreground mb-3 line-clamp-2 text-sm">
+                            {doc.message}
+                          </p>
+                        )}
+
+                        <div className="text-muted-foreground flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1">
+                            <Avatar className="h-5 w-5">
+                              <AvatarImage
+                                src={doc.author?.avatar_url || undefined}
+                              />
+                              <AvatarFallback className="text-xs">
+                                {doc.author?.name?.charAt(0).toUpperCase() ||
+                                  "U"}
+                              </AvatarFallback>
+                            </Avatar>
                             <span>{doc.author?.name || "Unknown"}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
                             <span>{formatDate(doc.created_at)}</span>
-                            {doc.group && (
-                              <span className="text-blue-600">
-                                {doc.group.name}
-                              </span>
-                            )}
                           </div>
                         </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setDocumentToView(doc);
-                                setIsViewContentOpen(true);
-                              }}
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Content
-                            </DropdownMenuItem>
-                            {doc.attachment_url && (
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  window.open(doc.attachment_url!, "_blank")
-                                }
-                              >
-                                <Download className="mr-2 h-4 w-4" />
-                                Download Attachment
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setDocumentToShare(doc);
-                                setIsShareDialogOpen(true);
-                              }}
-                            >
-                              <Share2 className="mr-2 h-4 w-4" />
-                              Share to Group
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteDocument(doc.id)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
 
-      {/* New Document Dialog */}
-      <Dialog open={isNewDocOpen} onOpenChange={setIsNewDocOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Create New Document</DialogTitle>
-            <DialogDescription>
-              Upload a file or create a text note
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                placeholder="Document title..."
-                value={newDoc.title}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setNewDoc({ ...newDoc, title: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="message">Description (optional)</Label>
-              <Textarea
-                id="message"
-                placeholder="Add a description..."
-                value={newDoc.message}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                  setNewDoc({ ...newDoc, message: e.target.value })
-                }
-                rows={3}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Attachment</Label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                accept="image/*,.pdf,.txt"
-                onChange={handleFileSelect}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                {selectedFile ? selectedFile.name : "Choose file"}
-              </Button>
-              {filePreview && (
-                <div className="relative mt-2">
-                  <img
-                    src={filePreview}
-                    alt="Preview"
-                    className="h-32 w-full rounded-lg object-cover"
+                        {doc.group && (
+                          <div className="mt-2 flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
+                            <Folder className="h-3 w-3" />
+                            <span>{doc.group.name}</span>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredDocuments.map((doc) => (
+                    <Card
+                      key={doc.id}
+                      className="hover:bg-accent bg-card border-border cursor-pointer transition-colors"
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-4">
+                          <div className="flex-shrink-0">
+                            {getFileIcon(doc.file_type || null)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-foreground truncate text-sm font-medium">
+                              {doc.title}
+                            </h3>
+                            <div className="text-muted-foreground mt-1 flex items-center gap-4 text-xs">
+                              <span>{doc.author?.name || "Unknown"}</span>
+                              <span>{formatDate(doc.created_at)}</span>
+                              {doc.group && (
+                                <span className="text-blue-600">
+                                  {doc.group.name}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                aria-label="Document options"
+                              >
+                                <MoreVertical
+                                  className="h-4 w-4"
+                                  aria-hidden="true"
+                                />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setDocumentToView(doc);
+                                  setIsViewContentOpen(true);
+                                }}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Content
+                              </DropdownMenuItem>
+                              {doc.attachment_url && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    window.open(doc.attachment_url!, "_blank")
+                                  }
+                                >
+                                  <Download className="mr-2 h-4 w-4" />
+                                  Download Attachment
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setDocumentToShare(doc);
+                                  setIsShareDialogOpen(true);
+                                }}
+                              >
+                                <Share2 className="mr-2 h-4 w-4" />
+                                Share to Group
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteDocument(doc.id)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+
+          {/* New Document Dialog */}
+          <Dialog open={isNewDocOpen} onOpenChange={setIsNewDocOpen}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Create New Document</DialogTitle>
+                <DialogDescription>
+                  Upload a file or create a text note
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Title</Label>
+                  <Input
+                    id="title"
+                    placeholder="Document title..."
+                    value={newDoc.title}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setNewDoc({ ...newDoc, title: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="message">Description (optional)</Label>
+                  <Textarea
+                    id="message"
+                    placeholder="Add a description..."
+                    value={newDoc.message}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                      setNewDoc({ ...newDoc, message: e.target.value })
+                    }
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Attachment</Label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    accept="image/*,.pdf,.txt"
+                    onChange={handleFileSelect}
                   />
                   <Button
                     type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-2 right-2 h-6 w-6"
-                    onClick={() => {
-                      setSelectedFile(null);
-                      setFilePreview(null);
-                      if (fileInputRef.current) fileInputRef.current.value = "";
-                    }}
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => fileInputRef.current?.click()}
                   >
-                    <X className="h-4 w-4" />
+                    <Upload className="mr-2 h-4 w-4" />
+                    {selectedFile ? selectedFile.name : "Choose file"}
                   </Button>
+                  {filePreview && (
+                    <div className="relative mt-2">
+                      <img
+                        src={filePreview}
+                        alt="File preview"
+                        className="h-32 w-full rounded-lg object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2 h-6 w-6"
+                        aria-label="Remove preview"
+                        onClick={() => {
+                          setSelectedFile(null);
+                          setFilePreview(null);
+                          if (fileInputRef.current)
+                            fileInputRef.current.value = "";
+                        }}
+                      >
+                        <X className="h-4 w-4" aria-hidden="true" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsNewDocOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateDocument} disabled={uploading}>
-              {uploading ? "Creating..." : "Create Document"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsNewDocOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateDocument} disabled={uploading}>
+                  {uploading ? "Creating..." : "Create Document"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
-      {/* Share Document Dialog */}
-      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Share Note to Group</DialogTitle>
-            <DialogDescription>
-              Select a group to share this note with. The note will be copied to
-              the group's shared notes board.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {documentToShare && (
-              <div className="bg-muted mb-4 rounded-lg p-3">
-                <p className="text-foreground mb-1 text-sm font-medium">
-                  {documentToShare.title}
-                </p>
-                {documentToShare.message &&
-                  documentToShare.message !== documentToShare.title && (
-                    <p className="line-clamp-2 text-xs text-gray-600">
-                      {documentToShare.message}
+          {/* Share Document Dialog */}
+          <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Share Note to Group</DialogTitle>
+                <DialogDescription>
+                  Select a group to share this note with. The note will be
+                  copied to the group&apos;s shared notes board.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                {documentToShare && (
+                  <div className="bg-muted mb-4 rounded-lg p-3">
+                    <p className="text-foreground mb-1 text-sm font-medium">
+                      {documentToShare.title}
+                    </p>
+                    {documentToShare.message &&
+                      documentToShare.message !== documentToShare.title && (
+                        <p className="line-clamp-2 text-xs text-gray-600">
+                          {documentToShare.message}
+                        </p>
+                      )}
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="group">Select Group</Label>
+                  {userGroups.length === 0 ? (
+                    <p className="text-sm text-gray-500">
+                      You are not a member of any groups yet. Join a group to
+                      share notes.
+                    </p>
+                  ) : (
+                    <select
+                      id="group"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      value={selectedGroupId || ""}
+                      onChange={(e) =>
+                        setSelectedGroupId(
+                          e.target.value ? parseInt(e.target.value) : null,
+                        )
+                      }
+                    >
+                      <option value="">Choose a group...</option>
+                      {userGroups.map((group) => (
+                        <option key={group.id} value={group.id}>
+                          {group.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsShareDialogOpen(false);
+                    setDocumentToShare(null);
+                    setSelectedGroupId(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleShareDocument}
+                  disabled={
+                    sharing || !selectedGroupId || userGroups.length === 0
+                  }
+                >
+                  {sharing ? "Sharing..." : "Share to Group"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* View Content Dialog */}
+          <Dialog open={isViewContentOpen} onOpenChange={setIsViewContentOpen}>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>{documentToView?.title || "Document"}</DialogTitle>
+                <DialogDescription>
+                  {documentToView?.author?.name &&
+                    `Created by ${documentToView.author.name}`}
+                  {documentToView?.group?.name &&
+                    ` • Shared in ${documentToView.group.name}`}
+                  {documentToView?.created_at &&
+                    ` • ${new Date(documentToView.created_at).toLocaleString()}`}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                {documentToView?.message && (
+                  <div className="bg-muted rounded-lg p-4">
+                    <p className="text-foreground text-sm break-words whitespace-pre-wrap">
+                      {documentToView.message}
+                    </p>
+                  </div>
+                )}
+                {documentToView?.attachment_url && (
+                  <div className="space-y-2">
+                    <Label>Attachment</Label>
+                    {documentToView.file_type === "image" ? (
+                      <img
+                        src={documentToView.attachment_url}
+                        alt={`${documentToView.title} document preview`}
+                        className="w-full rounded-lg border"
+                      />
+                    ) : (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() =>
+                          window.open(documentToView.attachment_url!, "_blank")
+                        }
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download{" "}
+                        {documentToView.file_type?.toUpperCase() || "File"}
+                      </Button>
+                    )}
+                  </div>
+                )}
+                {!documentToView?.message &&
+                  !documentToView?.attachment_url && (
+                    <p className="py-4 text-center text-sm text-gray-500">
+                      No content available
                     </p>
                   )}
               </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="group">Select Group</Label>
-              {userGroups.length === 0 ? (
-                <p className="text-sm text-gray-500">
-                  You are not a member of any groups yet. Join a group to share
-                  notes.
-                </p>
-              ) : (
-                <select
-                  id="group"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  value={selectedGroupId || ""}
-                  onChange={(e) =>
-                    setSelectedGroupId(
-                      e.target.value ? parseInt(e.target.value) : null,
-                    )
-                  }
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsViewContentOpen(false)}
                 >
-                  <option value="">Choose a group...</option>
-                  {userGroups.map((group) => (
-                    <option key={group.id} value={group.id}>
-                      {group.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsShareDialogOpen(false);
-                setDocumentToShare(null);
-                setSelectedGroupId(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleShareDocument}
-              disabled={sharing || !selectedGroupId || userGroups.length === 0}
-            >
-              {sharing ? "Sharing..." : "Share to Group"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Content Dialog */}
-      <Dialog open={isViewContentOpen} onOpenChange={setIsViewContentOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>{documentToView?.title || "Document"}</DialogTitle>
-            <DialogDescription>
-              {documentToView?.author?.name &&
-                `Created by ${documentToView.author.name}`}
-              {documentToView?.group?.name &&
-                ` • Shared in ${documentToView.group.name}`}
-              {documentToView?.created_at &&
-                ` • ${new Date(documentToView.created_at).toLocaleString()}`}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {documentToView?.message && (
-              <div className="bg-muted rounded-lg p-4">
-                <p className="text-foreground text-sm break-words whitespace-pre-wrap">
-                  {documentToView.message}
-                </p>
-              </div>
-            )}
-            {documentToView?.attachment_url && (
-              <div className="space-y-2">
-                <Label>Attachment</Label>
-                {documentToView.file_type === "image" ? (
-                  <img
-                    src={documentToView.attachment_url}
-                    alt={documentToView.title}
-                    className="w-full rounded-lg border"
-                  />
-                ) : (
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() =>
-                      window.open(documentToView.attachment_url!, "_blank")
-                    }
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Download {documentToView.file_type?.toUpperCase() || "File"}
-                  </Button>
-                )}
-              </div>
-            )}
-            {!documentToView?.message && !documentToView?.attachment_url && (
-              <p className="py-4 text-center text-sm text-gray-500">
-                No content available
-              </p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsViewContentOpen(false)}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+                  Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </main>
+      </div>
+    </>
   );
 }

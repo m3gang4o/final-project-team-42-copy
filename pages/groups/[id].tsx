@@ -1,6 +1,7 @@
 // pages/groups/[id].tsx
 import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
+import Head from "next/head";
 
 import { createSupabaseServerClient } from "@/utils/supabase/clients/server-props";
 import { Button } from "@/components/ui/button";
@@ -23,24 +24,39 @@ export default function GroupPage({ group, user, authorId }: GroupPageProps) {
   const router = useRouter();
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          onClick={() => router.push("/dashboard")}
-          className="mb-4 -ml-2"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Dashboard
-        </Button>
-        <h1 className="text-3xl font-bold">{group.name}</h1>
-        {group.description && (
-          <p className="text-muted-foreground mt-2">{group.description}</p>
-        )}
-      </div>
+    <>
+      <Head>
+        <title>{group.name} - StudyBuddy</title>
+        <meta
+          name="description"
+          content={
+            group.description ||
+            `Join the ${group.name} study group chat on StudyBuddy.`
+          }
+        />
+      </Head>
+      <div className="container mx-auto py-8">
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/dashboard")}
+            className="mb-4 -ml-2"
+            aria-label="Back to Dashboard"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
+            Back to Dashboard
+          </Button>
+          <h1 className="text-3xl font-bold">{group.name}</h1>
+          {group.description && (
+            <p className="text-muted-foreground mt-2">{group.description}</p>
+          )}
+        </div>
 
-      <GroupChat group={group} user={user} authorId={authorId} />
-    </div>
+        <main>
+          <GroupChat group={group} user={user} authorId={authorId} />
+        </main>
+      </div>
+    </>
   );
 }
 

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/router";
+import Head from "next/head";
 import { createSupabaseComponentClient } from "@/utils/supabase/clients/component";
 import {
   Book,
@@ -21,6 +22,8 @@ import {
   Clock,
   Trash2,
   LogOut,
+  Menu,
+  X,
 } from "lucide-react";
 import { ModeToggle } from "@/components/theme/mode-toggle";
 import {
@@ -968,836 +971,951 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="bg-background flex min-h-screen">
-      <aside className="fixed top-0 left-0 z-50 flex h-screen flex-col transition-all duration-300">
-        <Collapsible
-          open={!isSidebarCollapsed}
-          onOpenChange={(open: boolean) => setIsSidebarCollapsed(!open)}
-          className={`${isSidebarCollapsed ? "w-16" : "w-64"} bg-card border-border flex h-full flex-col border-r`}
+    <>
+      <Head>
+        <title>Dashboard - StudyBuddy</title>
+        <meta
+          name="description"
+          content="Manage your study groups, view recent activity, and discover new groups to join on StudyBuddy."
+        />
+      </Head>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded focus:bg-blue-600 focus:px-4 focus:py-2 focus:text-white"
+      >
+        Skip to main content
+      </a>
+      <div className="bg-background flex min-h-screen">
+        {/* Mobile backdrop overlay */}
+        {!isSidebarCollapsed && (
+          <div
+            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+            onClick={() => setIsSidebarCollapsed(true)}
+            aria-hidden="true"
+          />
+        )}
+        <aside
+          className={`fixed top-0 left-0 z-50 flex h-screen flex-col transition-all duration-300 ${
+            isSidebarCollapsed
+              ? "-translate-x-full lg:translate-x-0"
+              : "translate-x-0"
+          } ${isSidebarCollapsed ? "lg:w-16" : "w-64"} bg-card border-border flex h-full flex-col border-r`}
         >
-          {/* Collapse Trigger */}
-          <div className="absolute top-6 right-4 z-10">
-            <CollapsibleTrigger asChild>
+          <Collapsible
+            open={!isSidebarCollapsed}
+            onOpenChange={(open: boolean) => setIsSidebarCollapsed(!open)}
+            className={`${isSidebarCollapsed ? "lg:w-16" : "w-64"} flex h-full flex-col`}
+          >
+            {/* Collapse Trigger */}
+            <div className="absolute top-6 right-4 z-10 flex items-center gap-2">
+              {/* Mobile close button */}
               <Button
                 variant="ghost"
                 size="icon"
-                className="bg-card border-border h-8 w-8 border p-0"
-                title={
-                  isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
-                }
+                className="bg-card border-border h-8 w-8 border p-0 lg:hidden"
+                onClick={() => setIsSidebarCollapsed(true)}
+                aria-label="Close sidebar"
               >
-                {isSidebarCollapsed ? (
-                  <ChevronRight className="h-4 w-4" />
-                ) : (
-                  <PanelLeft className="h-4 w-4" />
-                )}
-                <span className="sr-only">Toggle sidebar</span>
+                <X className="h-4 w-4" aria-hidden="true" />
               </Button>
-            </CollapsibleTrigger>
-          </div>
-
-          <CollapsibleContent className="flex h-full flex-1 flex-col">
-            <div>
-              {/* Logo */}
-              <div className="border-border border-b p-6">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded bg-[#4B9CD3]">
-                    <Book className="h-5 w-5 text-white" />
-                  </div>
-                  <span className="text-foreground text-xl font-bold whitespace-nowrap">
-                    StudyBuddy
+              {/* Desktop collapse/expand button */}
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="bg-card border-border hidden h-8 w-8 border p-0 lg:flex"
+                  aria-label={
+                    isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
+                  }
+                >
+                  {isSidebarCollapsed ? (
+                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <PanelLeft className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  <span className="sr-only">
+                    {isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                   </span>
-                </div>
-              </div>
-
-              {/* Menu */}
-              <nav className="space-y-6 p-4">
-                <div>
-                  <h3 className="text-muted-foreground mb-3 text-xs font-semibold tracking-wider uppercase">
-                    Menu
-                  </h3>
-                  <ul className="space-y-1">
-                    <li>
-                      <button
-                        onClick={() => router.push("/dashboard")}
-                        className="bg-accent text-foreground flex w-full items-center gap-3 rounded-lg px-3 py-2 font-medium"
-                        title="Dashboard"
-                      >
-                        <Home className="h-5 w-5 flex-shrink-0" />
-                        <span>Dashboard</span>
-                      </button>
-                    </li>
-                    <li>
-                      <button
-                        onClick={() => router.push("/study-groups")}
-                        className="text-foreground hover:bg-accent flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors"
-                        title="Group Chats"
-                      >
-                        <Users className="h-5 w-5 flex-shrink-0" />
-                        <span>Group Chats</span>
-                      </button>
-                    </li>
-
-                    <li>
-                      <button
-                        onClick={() => router.push("/my-notes")}
-                        className="text-foreground hover:bg-accent flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors"
-                        title="My Notes"
-                      >
-                        <FileText className="h-5 w-5 flex-shrink-0" />
-                        <span>My Notes</span>
-                      </button>
-                    </li>
-                  </ul>
-                </div>
-
-                {/* Account */}
-                <div>
-                  <h3 className="text-muted-foreground mb-3 text-xs font-semibold tracking-wider uppercase">
-                    Account
-                  </h3>
-                  <ul className="space-y-1">
-                    <li>
-                      <button
-                        onClick={() => router.push("/settings")}
-                        className="text-foreground hover:bg-accent flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors"
-                        title="Settings"
-                      >
-                        <Settings className="h-5 w-5 flex-shrink-0" />
-                        <span>Settings</span>
-                      </button>
-                    </li>
-                  </ul>
-                </div>
-              </nav>
+                </Button>
+              </CollapsibleTrigger>
             </div>
 
-            <div className="border-border mt-auto border-t p-4">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10 flex-shrink-0">
-                  <AvatarImage
-                    src={userAvatarUrl || undefined}
-                    className="object-cover"
-                  />
-                  <AvatarFallback className="bg-muted">
-                    <span className="text-muted-foreground text-sm font-semibold">
-                      {userName
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .toUpperCase()
-                        .slice(0, 2)}
+            <CollapsibleContent className="flex h-full flex-1 flex-col">
+              <div>
+                {/* Logo */}
+                <div className="border-border border-b p-4 sm:p-6">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded bg-[#4B9CD3]">
+                      <Book className="h-5 w-5 text-white" aria-hidden="true" />
+                    </div>
+                    <span className="text-foreground text-xl font-bold whitespace-nowrap">
+                      StudyBuddy
                     </span>
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <p className="text-foreground truncate text-sm font-medium">
-                    {userName}
-                  </p>
-                  <p className="text-muted-foreground truncate text-xs">
-                    {userEmail}
-                  </p>
+                  </div>
+                </div>
+
+                {/* Menu */}
+                <nav className="space-y-4 p-3 sm:space-y-6 sm:p-4">
+                  <div>
+                    <h3 className="text-muted-foreground mb-3 text-xs font-semibold tracking-wider uppercase">
+                      Menu
+                    </h3>
+                    <ul className="space-y-1">
+                      <li>
+                        <button
+                          onClick={() => {
+                            router.push("/dashboard");
+                            setIsSidebarCollapsed(true);
+                          }}
+                          className="bg-accent text-foreground flex w-full items-center gap-3 rounded-lg px-3 py-2 font-medium"
+                          aria-label="Navigate to Dashboard"
+                        >
+                          <Home
+                            className="h-5 w-5 flex-shrink-0"
+                            aria-hidden="true"
+                          />
+                          <span>Dashboard</span>
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          onClick={() => {
+                            router.push("/study-groups");
+                            setIsSidebarCollapsed(true);
+                          }}
+                          className="text-foreground hover:bg-accent flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors"
+                          aria-label="Navigate to Group Chats"
+                        >
+                          <Users
+                            className="h-5 w-5 flex-shrink-0"
+                            aria-hidden="true"
+                          />
+                          <span>Group Chats</span>
+                        </button>
+                      </li>
+
+                      <li>
+                        <button
+                          onClick={() => {
+                            router.push("/my-notes");
+                            setIsSidebarCollapsed(true);
+                          }}
+                          className="text-foreground hover:bg-accent flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors"
+                          aria-label="Navigate to My Notes"
+                        >
+                          <FileText
+                            className="h-5 w-5 flex-shrink-0"
+                            aria-hidden="true"
+                          />
+                          <span>My Notes</span>
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Account */}
+                  <div>
+                    <h3 className="text-muted-foreground mb-3 text-xs font-semibold tracking-wider uppercase">
+                      Account
+                    </h3>
+                    <ul className="space-y-1">
+                      <li>
+                        <button
+                          onClick={() => {
+                            router.push("/settings");
+                            setIsSidebarCollapsed(true);
+                          }}
+                          className="text-foreground hover:bg-accent flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors"
+                          aria-label="Navigate to Settings"
+                        >
+                          <Settings
+                            className="h-5 w-5 flex-shrink-0"
+                            aria-hidden="true"
+                          />
+                          <span>Settings</span>
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </nav>
+              </div>
+
+              <div className="border-border mt-auto border-t p-4">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10 flex-shrink-0">
+                    <AvatarImage
+                      src={userAvatarUrl || undefined}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="bg-muted">
+                      <span className="text-muted-foreground text-sm font-semibold">
+                        {userName
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()
+                          .slice(0, 2)}
+                      </span>
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-foreground truncate text-sm font-medium">
+                      {userName}
+                    </p>
+                    <p className="text-muted-foreground truncate text-xs">
+                      {userEmail}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-      </aside>
+            </CollapsibleContent>
+          </Collapsible>
+        </aside>
 
-      {/* Main Content */}
-      <main
-        className={`flex-1 overflow-y-auto p-8 transition-all duration-300 ${isSidebarCollapsed ? "ml-16" : "ml-64"}`}
-      >
-        {/* Welcome Header */}
-        <div className="mb-8 flex items-start justify-between">
-          <div>
-            <h1 className="text-foreground mb-2 text-3xl font-bold">
-              Welcome, {userName}!
-            </h1>
-            <p className="text-muted-foreground">
-              Here&apos;s what&apos;s happening with your group chats today.
-            </p>
+        {/* Main Content */}
+        <main
+          id="main-content"
+          className={`flex-1 overflow-y-auto p-4 transition-all duration-300 md:p-8 ${
+            isSidebarCollapsed ? "lg:ml-16" : "lg:ml-64"
+          }`}
+        >
+          {/* Mobile Menu Button */}
+          <div className="mb-4 flex items-center justify-between lg:hidden">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSidebarCollapsed(false)}
+              aria-label="Open menu"
+            >
+              <Menu className="h-6 w-6" aria-hidden="true" />
+            </Button>
+            <ModeToggle />
           </div>
-          <ModeToggle />
-        </div>
 
-        {/* Group Chats Section */}
-        <div className="mb-8">
-          <div className="mb-6 flex items-center justify-between">
+          {/* Welcome Header */}
+          <div className="mb-6 flex flex-col gap-4 md:mb-8 md:flex-row md:items-start md:justify-between">
             <div>
-              <h2 className="text-foreground text-2xl font-bold">
-                Group Chats
-              </h2>
-              <p className="text-muted-foreground mt-1">
-                Join course-specific groups to collaborate with classmates
+              <h1 className="text-foreground mb-2 text-2xl font-bold md:text-3xl">
+                Welcome, {userName}!
+              </h1>
+              <p className="text-muted-foreground text-sm md:text-base">
+                Here&apos;s what&apos;s happening with your group chats today.
               </p>
             </div>
-            <div className="flex gap-3">
-              <Button
-                onClick={() => setIsCreateGroupOpen(true)}
-                className="bg-blue-600 text-white hover:bg-blue-700"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Create Group
-              </Button>
-              <Button
-                onClick={() => setIsJoinGroupOpen(true)}
-                variant="outline"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Join Group
-              </Button>
+            <div className="hidden md:block">
+              <ModeToggle />
             </div>
           </div>
 
-          {/* Summary Cards */}
-          <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-muted-foreground mb-2 text-sm font-medium">
-                      Total Groups
-                    </p>
-                    <p className="text-foreground text-3xl font-bold">
-                      {studyGroups.length}
-                    </p>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {studyGroups.length === 0
-                        ? "Create your first group"
-                        : "Across all courses"}
-                    </p>
-                  </div>
-                  <Users className="text-muted-foreground h-6 w-6 flex-shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-muted-foreground mb-2 text-sm font-medium">
-                      Total Members
-                    </p>
-                    <p className="text-foreground text-3xl font-bold">
-                      {studyGroups.reduce(
-                        (sum, group) => sum + group.members,
-                        0,
-                      )}
-                    </p>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {studyGroups.length > 0
-                        ? "In your groups"
-                        : "Join a group to get started"}
-                    </p>
-                  </div>
-                  <Users className="text-muted-foreground h-6 w-6 flex-shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-muted-foreground mb-2 text-sm font-medium">
-                      Messages & Files
-                    </p>
-                    <p className="text-foreground text-3xl font-bold">
-                      {totalResources}
-                    </p>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {totalResources > 0
-                        ? "Across all your groups"
-                        : "No messages yet"}
-                    </p>
-                  </div>
-                  <FileText className="text-muted-foreground h-6 w-6 flex-shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-muted-foreground mb-2 text-sm font-medium">
-                      Study Streak
-                    </p>
-                    <p className="text-foreground flex items-center gap-1 text-3xl font-bold">
-                      {studyStreak} day{studyStreak !== 1 ? "s" : ""}{" "}
-                      {studyStreak > 0 && (
-                        <Flame className="h-5 w-5 text-orange-500" />
-                      )}
-                    </p>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {studyStreak === 0
-                        ? "Start your streak today!"
-                        : studyStreak < 3
-                          ? "Keep it up!"
-                          : studyStreak < 7
-                            ? "Great job!"
-                            : "Amazing streak!"}
-                    </p>
-                  </div>
-                  <TrendingUp className="text-muted-foreground h-6 w-6 flex-shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Tabs and Search */}
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="w-full"
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <TabsList>
-                <TabsTrigger value="my-groups">My Groups</TabsTrigger>
-                <TabsTrigger value="discover">Discover</TabsTrigger>
-                <TabsTrigger value="recent-activity">
-                  Recent Activity
-                </TabsTrigger>
-              </TabsList>
-              <div className="relative w-64">
-                <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
-                <Input
-                  type="text"
-                  placeholder={
-                    activeTab === "recent-activity"
-                      ? "Search activities..."
-                      : activeTab === "discover"
-                        ? "Search groups..."
-                        : "Search your groups..."
-                  }
-                  className="pl-10"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+          {/* Group Chats Section */}
+          <div className="mb-6 md:mb-8">
+            <div className="mb-4 flex flex-col gap-4 md:mb-6 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-foreground text-xl font-bold md:text-2xl">
+                  Group Chats
+                </h2>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  Join course-specific groups to collaborate with classmates
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+                <Button
+                  onClick={() => setIsCreateGroupOpen(true)}
+                  className="w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto"
+                  aria-label="Create a new study group"
+                >
+                  <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Create Group
+                </Button>
+                <Button
+                  onClick={() => setIsJoinGroupOpen(true)}
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  aria-label="Join an existing study group"
+                >
+                  <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Join Group
+                </Button>
               </div>
             </div>
 
-            {/* My Groups Tab */}
-            <TabsContent value="my-groups" className="mt-6">
-              {filteredStudyGroups.length === 0 ? (
-                <div className="text-muted-foreground py-12 text-center">
-                  <p>Create your first group chat!</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  {filteredStudyGroups.map((group) => (
-                    <Card
-                      key={group.id}
-                      className="cursor-pointer transition-shadow hover:shadow-lg"
-                      onClick={() => router.push(`/groups/${group.id}`)}
-                    >
-                      <CardContent className="relative p-6">
-                        {currentUserId === group.owner_id && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedGroupForDelete({
-                                id: group.id,
-                                name: group.name,
-                              });
-                              setDeleteDialogOpen(true);
-                            }}
-                            className="absolute top-2 right-2 h-7 w-7 text-red-600 hover:bg-red-50 hover:text-red-700"
-                            title="Delete group"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+            {/* Summary Cards */}
+            <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:mb-8 lg:grid-cols-4">
+              <Card>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-muted-foreground mb-2 text-sm font-medium">
+                        Total Groups
+                      </p>
+                      <p className="text-foreground text-3xl font-bold">
+                        {studyGroups.length}
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {studyGroups.length === 0
+                          ? "Create your first group"
+                          : "Across all courses"}
+                      </p>
+                    </div>
+                    <Users className="text-muted-foreground h-6 w-6 flex-shrink-0" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-muted-foreground mb-2 text-sm font-medium">
+                        Total Members
+                      </p>
+                      <p className="text-foreground text-3xl font-bold">
+                        {studyGroups.reduce(
+                          (sum, group) => sum + group.members,
+                          0,
                         )}
-                        <div className="flex items-start gap-4">
-                          {group.imageUrl ? (
-                            <div className="border-border flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border">
-                              <img
-                                src={group.imageUrl}
-                                alt={group.name}
-                                className="h-full w-full object-cover"
-                              />
-                            </div>
-                          ) : (
-                            <div
-                              className={`h-12 w-12 ${group.color} flex flex-shrink-0 items-center justify-center rounded-lg`}
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {studyGroups.length > 0
+                          ? "In your groups"
+                          : "Join a group to get started"}
+                      </p>
+                    </div>
+                    <Users className="text-muted-foreground h-6 w-6 flex-shrink-0" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-muted-foreground mb-2 text-sm font-medium">
+                        Messages & Files
+                      </p>
+                      <p className="text-foreground text-3xl font-bold">
+                        {totalResources}
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {totalResources > 0
+                          ? "Across all your groups"
+                          : "No messages yet"}
+                      </p>
+                    </div>
+                    <FileText className="text-muted-foreground h-6 w-6 flex-shrink-0" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-muted-foreground mb-2 text-sm font-medium">
+                        Study Streak
+                      </p>
+                      <p className="text-foreground flex items-center gap-1 text-3xl font-bold">
+                        {studyStreak} day{studyStreak !== 1 ? "s" : ""}{" "}
+                        {studyStreak > 0 && (
+                          <Flame className="h-5 w-5 text-orange-500" />
+                        )}
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {studyStreak === 0
+                          ? "Start your streak today!"
+                          : studyStreak < 3
+                            ? "Keep it up!"
+                            : studyStreak < 7
+                              ? "Great job!"
+                              : "Amazing streak!"}
+                      </p>
+                    </div>
+                    <TrendingUp className="text-muted-foreground h-6 w-6 flex-shrink-0" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Tabs and Search */}
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full"
+            >
+              <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <TabsList className="w-full overflow-x-auto sm:w-auto">
+                  <TabsTrigger
+                    value="my-groups"
+                    className="flex-1 sm:flex-initial"
+                  >
+                    My Groups
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="discover"
+                    className="flex-1 sm:flex-initial"
+                  >
+                    Discover
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="recent-activity"
+                    className="flex-1 sm:flex-initial"
+                  >
+                    Recent Activity
+                  </TabsTrigger>
+                </TabsList>
+                <div className="relative w-full sm:w-64">
+                  <Search
+                    className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform"
+                    aria-hidden="true"
+                  />
+                  <Input
+                    type="text"
+                    placeholder={
+                      activeTab === "recent-activity"
+                        ? "Search activities..."
+                        : activeTab === "discover"
+                          ? "Search groups..."
+                          : "Search your groups..."
+                    }
+                    className="pl-10"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    aria-label="Search"
+                  />
+                </div>
+              </div>
+
+              {/* My Groups Tab */}
+              <TabsContent value="my-groups" className="mt-6">
+                {filteredStudyGroups.length === 0 ? (
+                  <div className="text-muted-foreground py-12 text-center">
+                    <p>Create your first group chat!</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+                    {filteredStudyGroups.map((group) => (
+                      <Card
+                        key={group.id}
+                        className="cursor-pointer transition-shadow hover:shadow-lg"
+                        onClick={() => router.push(`/groups/${group.id}`)}
+                      >
+                        <CardContent className="relative p-4 sm:p-6">
+                          {currentUserId === group.owner_id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedGroupForDelete({
+                                  id: group.id,
+                                  name: group.name,
+                                });
+                                setDeleteDialogOpen(true);
+                              }}
+                              className="absolute top-2 right-2 h-7 w-7 text-red-600 hover:bg-red-50 hover:text-red-700"
+                              aria-label={`Delete ${group.name} group`}
                             >
-                              <Book className="h-6 w-6 text-white" />
-                            </div>
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
+                            </Button>
                           )}
-                          <div className="min-w-0 flex-1">
-                            <h3 className="text-foreground mb-1 text-lg font-semibold">
-                              {group.name}
-                            </h3>
-                            <p className="text-muted-foreground mb-3 text-sm">
-                              {group.description}
-                            </p>
-                            <div className="text-muted-foreground flex items-center gap-4 text-sm">
-                              <div className="flex items-center gap-1">
-                                <Users className="h-4 w-4" />
-                                <span>{group.members} members</span>
+                          <div className="flex items-start gap-4">
+                            {group.imageUrl ? (
+                              <div className="border-border flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border">
+                                <img
+                                  src={group.imageUrl}
+                                  alt={`${group.name} group image`}
+                                  className="h-full w-full object-cover"
+                                />
                               </div>
-                              <div className="flex items-center gap-1">
-                                <FileText className="h-4 w-4" />
-                                <span>{group.resources} resources</span>
+                            ) : (
+                              <div
+                                className={`h-12 w-12 ${group.color} flex flex-shrink-0 items-center justify-center rounded-lg`}
+                              >
+                                <Book
+                                  className="h-6 w-6 text-white"
+                                  aria-hidden="true"
+                                />
                               </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-foreground mb-1 text-lg font-semibold">
+                                {group.name}
+                              </h4>
+                              <p className="text-muted-foreground mb-3 text-sm">
+                                {group.description}
+                              </p>
+                              <div className="text-muted-foreground flex items-center gap-4 text-sm">
+                                <div className="flex items-center gap-1">
+                                  <Users className="h-4 w-4" />
+                                  <span>{group.members} members</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <FileText className="h-4 w-4" />
+                                  <span>{group.resources} resources</span>
+                                </div>
+                              </div>
+                              <div className="mt-3 mb-3 flex items-center gap-1.5">
+                                <Clock className="text-muted-foreground h-3.5 w-3.5" />
+                                <span className="text-foreground text-xs">
+                                  Recent activity:{" "}
+                                  {formatTimeAgo(group.lastActivity)}
+                                </span>
+                              </div>
+                              {currentUserId === group.owner_id ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedGroupForJoinCode(group.id);
+                                    setJoinCodeDialogOpen(true);
+                                  }}
+                                  className="w-full border-blue-300 text-blue-700 hover:bg-blue-50"
+                                >
+                                  <Share2 className="mr-2 h-4 w-4" />
+                                  View Join Code
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedGroupForLeave({
+                                      id: group.id,
+                                      name: group.name,
+                                    });
+                                    setLeaveDialogOpen(true);
+                                  }}
+                                  className="w-full border-orange-300 text-orange-700 hover:bg-orange-50"
+                                >
+                                  <LogOut className="mr-2 h-4 w-4" />
+                                  Leave Group
+                                </Button>
+                              )}
                             </div>
-                            <div className="mt-3 mb-3 flex items-center gap-1.5">
-                              <Clock className="text-muted-foreground h-3.5 w-3.5" />
-                              <span className="text-foreground text-xs">
-                                Recent activity:{" "}
-                                {formatTimeAgo(group.lastActivity)}
-                              </span>
-                            </div>
-                            {currentUserId === group.owner_id ? (
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Discover Tab */}
+              <TabsContent value="discover" className="mt-6">
+                {discoverLoading ? (
+                  <div className="text-muted-foreground py-12 text-center">
+                    <p>Loading groups...</p>
+                  </div>
+                ) : filteredDiscoverGroups.length === 0 ? (
+                  <div className="text-muted-foreground py-12 text-center">
+                    <p>
+                      No groups available to discover. Create your own group to
+                      get started!
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+                    {filteredDiscoverGroups.map((group) => (
+                      <Card
+                        key={group.id}
+                        className="cursor-pointer transition-shadow hover:shadow-lg"
+                        onClick={() => router.push(`/groups/${group.id}`)}
+                      >
+                        <CardContent className="relative p-4 sm:p-6">
+                          <div className="flex items-start gap-4">
+                            {group.imageUrl ? (
+                              <div className="border-border flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border">
+                                <img
+                                  src={group.imageUrl}
+                                  alt={`${group.name} group image`}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div
+                                className={`h-12 w-12 ${group.color} flex flex-shrink-0 items-center justify-center rounded-lg`}
+                              >
+                                <Book
+                                  className="h-6 w-6 text-white"
+                                  aria-hidden="true"
+                                />
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-foreground mb-1 text-lg font-semibold">
+                                {group.name}
+                              </h4>
+                              <p className="text-muted-foreground mb-3 text-sm">
+                                {group.description}
+                              </p>
+                              <div className="text-muted-foreground flex items-center gap-4 text-sm">
+                                <div className="flex items-center gap-1">
+                                  <Users className="h-4 w-4" />
+                                  <span>{group.members} members</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <FileText className="h-4 w-4" />
+                                  <span>{group.resources} resources</span>
+                                </div>
+                              </div>
+                              <div className="mt-3 mb-3 flex items-center gap-1.5">
+                                <Clock className="text-muted-foreground h-3.5 w-3.5" />
+                                <span className="text-foreground text-xs">
+                                  Recent activity:{" "}
+                                  {formatTimeAgo(group.lastActivity)}
+                                </span>
+                              </div>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setSelectedGroupForJoinCode(group.id);
-                                  setJoinCodeDialogOpen(true);
+                                  handleJoinDiscoverGroup(group.id, group.name);
                                 }}
                                 className="w-full border-blue-300 text-blue-700 hover:bg-blue-50"
                               >
-                                <Share2 className="mr-2 h-4 w-4" />
-                                View Join Code
+                                <Plus className="mr-2 h-4 w-4" />
+                                Join Group
                               </Button>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedGroupForLeave({
-                                    id: group.id,
-                                    name: group.name,
-                                  });
-                                  setLeaveDialogOpen(true);
-                                }}
-                                className="w-full border-orange-300 text-orange-700 hover:bg-orange-50"
-                              >
-                                <LogOut className="mr-2 h-4 w-4" />
-                                Leave Group
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Discover Tab */}
-            <TabsContent value="discover" className="mt-6">
-              {discoverLoading ? (
-                <div className="text-muted-foreground py-12 text-center">
-                  <p>Loading groups...</p>
-                </div>
-              ) : filteredDiscoverGroups.length === 0 ? (
-                <div className="text-muted-foreground py-12 text-center">
-                  <p>
-                    No groups available to discover. Create your own group to
-                    get started!
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  {filteredDiscoverGroups.map((group) => (
-                    <Card
-                      key={group.id}
-                      className="cursor-pointer transition-shadow hover:shadow-lg"
-                      onClick={() => router.push(`/groups/${group.id}`)}
-                    >
-                      <CardContent className="relative p-6">
-                        <div className="flex items-start gap-4">
-                          {group.imageUrl ? (
-                            <div className="border-border flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border">
-                              <img
-                                src={group.imageUrl}
-                                alt={group.name}
-                                className="h-full w-full object-cover"
-                              />
                             </div>
-                          ) : (
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Recent Activity Tab */}
+              <TabsContent value="recent-activity" className="mt-6">
+                {activitiesLoading ? (
+                  <div className="text-muted-foreground py-12 text-center">
+                    <p>Loading activities...</p>
+                  </div>
+                ) : filteredRecentActivities.length === 0 ? (
+                  <div className="text-muted-foreground py-12 text-center">
+                    <p>
+                      No recent activity. Join groups and start collaborating!
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {filteredRecentActivities.map((activity) => (
+                      <Card
+                        key={activity.id}
+                        className="cursor-pointer transition-shadow hover:shadow-md"
+                        onClick={() =>
+                          router.push(`/groups/${activity.groupId}`)
+                        }
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-4">
                             <div
-                              className={`h-12 w-12 ${group.color} flex flex-shrink-0 items-center justify-center rounded-lg`}
+                              className={`h-10 w-10 ${activity.groupColor} flex flex-shrink-0 items-center justify-center rounded-lg`}
                             >
-                              <Book className="h-6 w-6 text-white" />
+                              <Book className="h-5 w-5 text-white" />
                             </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <h3 className="text-foreground mb-1 text-lg font-semibold">
-                              {group.name}
-                            </h3>
-                            <p className="text-muted-foreground mb-3 text-sm">
-                              {group.description}
-                            </p>
-                            <div className="text-muted-foreground flex items-center gap-4 text-sm">
-                              <div className="flex items-center gap-1">
-                                <Users className="h-4 w-4" />
-                                <span>{group.members} members</span>
+                            <div className="min-w-0 flex-1">
+                              <div className="mb-1 flex items-center gap-2">
+                                <h3 className="text-foreground text-sm font-semibold">
+                                  {activity.groupName}
+                                </h3>
                               </div>
-                              <div className="flex items-center gap-1">
-                                <FileText className="h-4 w-4" />
-                                <span>{group.resources} resources</span>
-                              </div>
+                              <p className="text-foreground mb-2 text-sm">
+                                {getActivityDescription(activity)}
+                              </p>
+                              <p className="text-muted-foreground text-xs">
+                                {formatTimeAgo(activity.createdAt)}
+                              </p>
                             </div>
-                            <div className="mt-3 mb-3 flex items-center gap-1.5">
-                              <Clock className="text-muted-foreground h-3.5 w-3.5" />
-                              <span className="text-foreground text-xs">
-                                Recent activity:{" "}
-                                {formatTimeAgo(group.lastActivity)}
-                              </span>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleJoinDiscoverGroup(group.id, group.name);
-                              }}
-                              className="w-full border-blue-300 text-blue-700 hover:bg-blue-50"
-                            >
-                              <Plus className="mr-2 h-4 w-4" />
-                              Join Group
-                            </Button>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
+        </main>
 
-            {/* Recent Activity Tab */}
-            <TabsContent value="recent-activity" className="mt-6">
-              {activitiesLoading ? (
-                <div className="text-muted-foreground py-12 text-center">
-                  <p>Loading activities...</p>
-                </div>
-              ) : filteredRecentActivities.length === 0 ? (
-                <div className="text-muted-foreground py-12 text-center">
-                  <p>
-                    No recent activity. Join groups and start collaborating!
+        {/* Create Group Overlay */}
+        <Dialog open={isCreateGroupOpen} onOpenChange={setIsCreateGroupOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Create Group Chat</DialogTitle>
+              <DialogDescription>
+                Start a new group chat for your course
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="group-name">Group Name</Label>
+                <Input
+                  id="group-name"
+                  placeholder="e.g., COMP 110 Group Chat"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="course">Course</Label>
+                <Input
+                  id="course"
+                  placeholder="e.g., COMP 110"
+                  value={course}
+                  onChange={(e) => setCourse(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Brief description of the group"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={4}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="group-image">Group Image (Optional)</Label>
+                <Input
+                  id="group-image"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="cursor-pointer"
+                />
+                {groupImagePreview && (
+                  <div className="mt-2">
+                    <img
+                      src={groupImagePreview}
+                      alt="Group preview"
+                      className="border-border h-24 w-24 rounded-lg border object-cover"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsCreateGroupOpen(false);
+                  setGroupName("");
+                  setCourse("");
+                  setDescription("");
+                  setGroupImagePreview(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateGroup}
+                className="bg-blue-600 text-white hover:bg-blue-700"
+                disabled={!groupName || !course || !description}
+              >
+                Create Group
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Join Group Overlay */}
+        <Dialog open={isJoinGroupOpen} onOpenChange={setIsJoinGroupOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Join a Group Chat</DialogTitle>
+              <DialogDescription>
+                Join a group chat for your course
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="join-code">Join Code</Label>
+                <Input
+                  id="join-code"
+                  placeholder="Enter join code"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsJoinGroupOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleJoinGroup}
+                className="bg-blue-600 text-white hover:bg-blue-700"
+                disabled={!joinCode}
+              >
+                Join Group
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Join Code Overlay */}
+        <Dialog open={joinCodeDialogOpen} onOpenChange={setJoinCodeDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Join Code</DialogTitle>
+              <DialogDescription>
+                Share this code with others so they can join your study group
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {selectedGroupForJoinCode && (
+                <div className="space-y-3">
+                  <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-6 text-center">
+                    <p className="mb-2 text-sm font-medium text-blue-900">
+                      Your Join Code
+                    </p>
+                    <p className="font-mono text-4xl font-bold tracking-wider text-blue-700">
+                      {selectedGroupForJoinCode}
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() =>
+                      selectedGroupForJoinCode &&
+                      handleCopyJoinCode(selectedGroupForJoinCode)
+                    }
+                    className="w-full bg-blue-600 text-white hover:bg-blue-700"
+                    size="lg"
+                  >
+                    {copiedGroupId === selectedGroupForJoinCode ? (
+                      <>
+                        <Check className="mr-2 h-5 w-5" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="mr-2 h-5 w-5" />
+                        Copy Join Code
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-muted-foreground text-center text-xs">
+                    Anyone with this code can join your group by entering it in
+                    the &quot;Join Group&quot; section
                   </p>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {filteredRecentActivities.map((activity) => (
-                    <Card
-                      key={activity.id}
-                      className="cursor-pointer transition-shadow hover:shadow-md"
-                      onClick={() => router.push(`/groups/${activity.groupId}`)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-4">
-                          <div
-                            className={`h-10 w-10 ${activity.groupColor} flex flex-shrink-0 items-center justify-center rounded-lg`}
-                          >
-                            <Book className="h-5 w-5 text-white" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="mb-1 flex items-center gap-2">
-                              <h3 className="text-foreground text-sm font-semibold">
-                                {activity.groupName}
-                              </h3>
-                            </div>
-                            <p className="text-foreground mb-2 text-sm">
-                              {getActivityDescription(activity)}
-                            </p>
-                            <p className="text-muted-foreground text-xs">
-                              {formatTimeAgo(activity.createdAt)}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
               )}
-            </TabsContent>
-          </Tabs>
-        </div>
-      </main>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setJoinCodeDialogOpen(false);
+                  setSelectedGroupForJoinCode(null);
+                }}
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      {/* Create Group Overlay */}
-      <Dialog open={isCreateGroupOpen} onOpenChange={setIsCreateGroupOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Create Group Chat</DialogTitle>
-            <DialogDescription>
-              Start a new group chat for your course
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="group-name">Group Name</Label>
-              <Input
-                id="group-name"
-                placeholder="e.g., COMP 110 Group Chat"
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="course">Course</Label>
-              <Input
-                id="course"
-                placeholder="e.g., COMP 110"
-                value={course}
-                onChange={(e) => setCourse(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Brief description of the group"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="group-image">Group Image (Optional)</Label>
-              <Input
-                id="group-image"
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="cursor-pointer"
-              />
-              {groupImagePreview && (
-                <div className="mt-2">
-                  <img
-                    src={groupImagePreview}
-                    alt="Group preview"
-                    className="border-border h-24 w-24 rounded-lg border object-cover"
-                  />
+        {/* Delete Group Confirmation Overlay */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Delete Study Group</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this study group? This action
+                cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {selectedGroupForDelete && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                  <p className="mb-1 text-sm font-medium text-red-900">
+                    Group to be deleted:
+                  </p>
+                  <p className="text-base font-semibold text-red-700">
+                    {selectedGroupForDelete.name}
+                  </p>
+                  <p className="mt-2 text-xs text-red-600">
+                    This will permanently delete the group, all memberships, and
+                    all messages.
+                  </p>
                 </div>
               )}
             </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsCreateGroupOpen(false);
-                setGroupName("");
-                setCourse("");
-                setDescription("");
-                setGroupImagePreview(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateGroup}
-              className="bg-blue-600 text-white hover:bg-blue-700"
-              disabled={!groupName || !course || !description}
-            >
-              Create Group
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDeleteDialogOpen(false);
+                  setSelectedGroupForDelete(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeleteGroup}
+                className="bg-red-600 text-white hover:bg-red-700"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Group
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      {/* Join Group Overlay */}
-      <Dialog open={isJoinGroupOpen} onOpenChange={setIsJoinGroupOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Join a Group Chat</DialogTitle>
-            <DialogDescription>
-              Join a group chat for your course
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="join-code">Join Code</Label>
-              <Input
-                id="join-code"
-                placeholder="Enter join code"
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsJoinGroupOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleJoinGroup}
-              className="bg-blue-600 text-white hover:bg-blue-700"
-              disabled={!joinCode}
-            >
-              Join Group
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Join Code Overlay */}
-      <Dialog open={joinCodeDialogOpen} onOpenChange={setJoinCodeDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Join Code</DialogTitle>
-            <DialogDescription>
-              Share this code with others so they can join your study group
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {selectedGroupForJoinCode && (
-              <div className="space-y-3">
-                <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-6 text-center">
-                  <p className="mb-2 text-sm font-medium text-blue-900">
-                    Your Join Code
+        {/* Leave Group Confirmation Overlay */}
+        <Dialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Leave Study Group</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to leave this study group? You can rejoin
+                later using the join code.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {selectedGroupForLeave && (
+                <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
+                  <p className="mb-1 text-sm font-medium text-orange-900">
+                    Group you&apos;ll be leaving:
                   </p>
-                  <p className="font-mono text-4xl font-bold tracking-wider text-blue-700">
-                    {selectedGroupForJoinCode}
+                  <p className="text-base font-semibold text-orange-700">
+                    {selectedGroupForLeave.name}
+                  </p>
+                  <p className="mt-2 text-xs text-orange-600">
+                    You will no longer have access to this group&apos;s messages
+                    and resources.
                   </p>
                 </div>
-                <Button
-                  onClick={() =>
-                    selectedGroupForJoinCode &&
-                    handleCopyJoinCode(selectedGroupForJoinCode)
-                  }
-                  className="w-full bg-blue-600 text-white hover:bg-blue-700"
-                  size="lg"
-                >
-                  {copiedGroupId === selectedGroupForJoinCode ? (
-                    <>
-                      <Check className="mr-2 h-5 w-5" />
-                      Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="mr-2 h-5 w-5" />
-                      Copy Join Code
-                    </>
-                  )}
-                </Button>
-                <p className="text-muted-foreground text-center text-xs">
-                  Anyone with this code can join your group by entering it in
-                  the &quot;Join Group&quot; section
-                </p>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setJoinCodeDialogOpen(false);
-                setSelectedGroupForJoinCode(null);
-              }}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Group Confirmation Overlay */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Delete Study Group</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this study group? This action
-              cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {selectedGroupForDelete && (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-                <p className="mb-1 text-sm font-medium text-red-900">
-                  Group to be deleted:
-                </p>
-                <p className="text-base font-semibold text-red-700">
-                  {selectedGroupForDelete.name}
-                </p>
-                <p className="mt-2 text-xs text-red-600">
-                  This will permanently delete the group, all memberships, and
-                  all messages.
-                </p>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDeleteDialogOpen(false);
-                setSelectedGroupForDelete(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleDeleteGroup}
-              className="bg-red-600 text-white hover:bg-red-700"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Group
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Leave Group Confirmation Overlay */}
-      <Dialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Leave Study Group</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to leave this study group? You can rejoin
-              later using the join code.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {selectedGroupForLeave && (
-              <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
-                <p className="mb-1 text-sm font-medium text-orange-900">
-                  Group you&apos;ll be leaving:
-                </p>
-                <p className="text-base font-semibold text-orange-700">
-                  {selectedGroupForLeave.name}
-                </p>
-                <p className="mt-2 text-xs text-orange-600">
-                  You will no longer have access to this group&apos;s messages
-                  and resources.
-                </p>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setLeaveDialogOpen(false);
-                setSelectedGroupForLeave(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleLeaveGroup}
-              className="bg-orange-600 text-white hover:bg-orange-700"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Leave Group
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setLeaveDialogOpen(false);
+                  setSelectedGroupForLeave(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleLeaveGroup}
+                className="bg-orange-600 text-white hover:bg-orange-700"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Leave Group
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </>
   );
 }

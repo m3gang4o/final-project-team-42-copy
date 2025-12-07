@@ -374,16 +374,33 @@ export function GroupChat({ group, user, authorId }: GroupChatProps) {
     <div className="flex h-full gap-4">
       <div className="border-border bg-card flex h-full flex-grow-3 flex-col overflow-hidden rounded-lg border">
         {/* MESSAGE LIST */}
-        <div className="flex-1 overflow-y-auto">
+        <div
+          className="flex-1 overflow-y-auto"
+          role="log"
+          aria-label="Chat messages"
+          aria-live="polite"
+          aria-atomic="false"
+        >
           <div className="flex flex-col-reverse gap-4 p-4">
             <div ref={messageEndRef} />
 
             {loadingMessages ? (
-              <div className="flex h-40 items-center justify-center">
-                <Loader2Icon className="h-6 w-6 animate-spin" />
+              <div
+                className="flex h-40 items-center justify-center"
+                role="status"
+                aria-live="polite"
+              >
+                <Loader2Icon
+                  className="h-6 w-6 animate-spin"
+                  aria-hidden="true"
+                />
+                <span className="sr-only">Loading messages...</span>
               </div>
             ) : messages.length === 0 ? (
-              <p className="text-muted-foreground text-center text-sm">
+              <p
+                className="text-muted-foreground text-center text-sm"
+                role="status"
+              >
                 No messages yet. Be the first to post!
               </p>
             ) : (
@@ -391,9 +408,14 @@ export function GroupChat({ group, user, authorId }: GroupChatProps) {
                 <div key={msg.id} className="flex gap-3">
                   <Avatar className="h-9 w-9">
                     {msg.author?.avatar_url ? (
-                      <AvatarImage src={msg.author.avatar_url} />
+                      <AvatarImage
+                        src={msg.author.avatar_url}
+                        alt={`${msg.author?.name || "User"}'s avatar`}
+                      />
                     ) : (
-                      <AvatarFallback>
+                      <AvatarFallback
+                        aria-label={`${msg.author?.name || "User"}'s avatar`}
+                      >
                         {msg.author?.name?.charAt(0)?.toUpperCase() ??
                           String(msg.id).slice(-1)}
                       </AvatarFallback>
@@ -414,8 +436,9 @@ export function GroupChat({ group, user, authorId }: GroupChatProps) {
                           size="icon"
                           className="ml-auto h-6 w-6"
                           onClick={() => handleDeleteMessage(msg.id)}
+                          aria-label={`Delete message from ${formatTime(msg.created_at)}`}
                         >
-                          <X className="h-3 w-3" />
+                          <X className="h-3 w-3" aria-hidden="true" />
                         </Button>
                       )}
                     </div>
@@ -430,6 +453,7 @@ export function GroupChat({ group, user, authorId }: GroupChatProps) {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="mt-2 inline-block text-sm text-blue-600 underline"
+                        aria-label={`View attachment: ${msg.attachment_url.split("/").pop() || "attachment"}`}
                       >
                         View Attachment
                       </a>
@@ -446,8 +470,21 @@ export function GroupChat({ group, user, authorId }: GroupChatProps) {
                   size="sm"
                   onClick={loadMoreMessages}
                   disabled={loadingMore}
+                  aria-label={
+                    loadingMore ? "Loading more messages" : "Load more messages"
+                  }
                 >
-                  {loadingMore ? "Loading..." : "Load more"}
+                  {loadingMore ? (
+                    <>
+                      <Loader2Icon
+                        className="mr-2 h-4 w-4 animate-spin"
+                        aria-hidden="true"
+                      />
+                      Loading...
+                    </>
+                  ) : (
+                    "Load more"
+                  )}
                 </Button>
               </div>
             )}
@@ -463,7 +500,14 @@ export function GroupChat({ group, user, authorId }: GroupChatProps) {
               placeholder="Type your message..."
               className="flex-1 resize-none"
               disabled={!canPost}
+              aria-label="Type your message"
+              aria-describedby={!canPost ? "post-disabled-help" : undefined}
             />
+            {!canPost && (
+              <span id="post-disabled-help" className="sr-only">
+                You must be logged in to post messages
+              </span>
+            )}
 
             <div className="flex flex-col gap-2">
               {/* Hidden file input */}
@@ -472,6 +516,7 @@ export function GroupChat({ group, user, authorId }: GroupChatProps) {
                 ref={fileInputRef}
                 accept="image/*"
                 className="hidden"
+                aria-label="Upload image file"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) setSelectedFile(file);
@@ -484,8 +529,9 @@ export function GroupChat({ group, user, authorId }: GroupChatProps) {
                 size="icon"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={!canPost}
+                aria-label="Attach image"
               >
-                <ImagePlus className="h-4 w-4" />
+                <ImagePlus className="h-4 w-4" aria-hidden="true" />
               </Button>
 
               {/* Send button */}
@@ -496,33 +542,48 @@ export function GroupChat({ group, user, authorId }: GroupChatProps) {
                 disabled={
                   !canPost || isPosting || (!draftText.trim() && !selectedFile)
                 }
+                aria-label={isPosting ? "Sending message" : "Send message"}
               >
                 {isPosting ? (
-                  <Loader2Icon className="h-4 w-4 animate-spin" />
+                  <Loader2Icon
+                    className="h-4 w-4 animate-spin"
+                    aria-hidden="true"
+                  />
                 ) : (
-                  <Send className="h-4 w-4" />
+                  <Send className="h-4 w-4" aria-hidden="true" />
                 )}
               </Button>
             </div>
           </div>
 
           {selectedFile && (
-            <div className="mt-2 flex items-center gap-2 text-sm">
-              <span className="max-w-[200px] truncate">
+            <div
+              className="mt-2 flex items-center gap-2 text-sm"
+              role="status"
+              aria-live="polite"
+            >
+              <span
+                className="max-w-[200px] truncate"
+                aria-label={`Selected file: ${selectedFile.name}`}
+              >
                 {selectedFile.name}
               </span>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setSelectedFile(null)}
+                aria-label={`Remove ${selectedFile.name}`}
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
           )}
         </div>
       </div>
-      <div className="border-border bg-card mb-4 rounded-lg border p-4">
+      <aside
+        className="border-border bg-card mb-4 rounded-lg border p-4"
+        aria-label="Group members"
+      >
         <h3 className="text-foreground mb-2 font-semibold">Active Members</h3>
         {activeMembers.length === 0 ? (
           <p className="text-muted-foreground text-sm">No active members</p>
@@ -530,11 +591,18 @@ export function GroupChat({ group, user, authorId }: GroupChatProps) {
           activeMembers.map((m) => (
             <div key={m.id} className="flex items-center gap-2 py-1">
               <Avatar className="h-7 w-7">
-                <AvatarImage src={m.avatar_url ?? undefined} />
-                <AvatarFallback>{m.name[0]}</AvatarFallback>
+                <AvatarImage
+                  src={m.avatar_url ?? undefined}
+                  alt={`${m.name}'s avatar`}
+                />
+                <AvatarFallback aria-label={`${m.name}'s avatar`}>
+                  {m.name[0]}
+                </AvatarFallback>
               </Avatar>
               <span className="text-foreground text-sm">{m.name}</span>
-              <span className="text-xs text-green-500">● online</span>
+              <span className="text-xs text-green-500" aria-label="online">
+                ● online
+              </span>
             </div>
           ))
         )}
@@ -548,14 +616,19 @@ export function GroupChat({ group, user, authorId }: GroupChatProps) {
           inactiveMembers.map((m) => (
             <div key={m.id} className="flex items-center gap-2 py-1">
               <Avatar className="h-7 w-7">
-                <AvatarImage src={m.avatar_url ?? undefined} />
-                <AvatarFallback>{m.name[0]}</AvatarFallback>
+                <AvatarImage
+                  src={m.avatar_url ?? undefined}
+                  alt={`${m.name}'s avatar`}
+                />
+                <AvatarFallback aria-label={`${m.name}'s avatar`}>
+                  {m.name[0]}
+                </AvatarFallback>
               </Avatar>
               <span className="text-foreground text-sm">{m.name}</span>
             </div>
           ))
         )}
-      </div>
+      </aside>
     </div>
   );
 }
