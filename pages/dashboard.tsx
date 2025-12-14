@@ -146,14 +146,10 @@ export default function DashboardPage() {
     retry: false,
     refetchOnWindowFocus: false,
   });
-  const { data: groupsData = [], refetch: refetchGroups } = api.groups.getGroups.useQuery();
-  const { data: discoverGroupsData = [] } = api.groups.discoverGroups.useQuery();
+  const { data: groupsData = [], refetch: refetchGroups } = api.groups.getUserGroups.useQuery();
+  const { data: allGroupsData = [] } = api.groups.getAllGroups.useQuery({ search: undefined });
+  const { data: userGroupsForFilter = [] } = api.groups.getUserGroups.useQuery();
   const createGroupMutation = api.groups.createGroup.useMutation({
-    onSuccess: () => {
-      refetchGroups();
-    },
-  });
-  const joinGroupMutation = api.groups.joinGroup.useMutation({
     onSuccess: () => {
       refetchGroups();
     },
@@ -163,6 +159,11 @@ export default function DashboardPage() {
       refetchGroups();
     },
   });
+
+  const userGroupIds = new Set(userGroupsForFilter.map(g => g.id));
+  const discoverGroupsData = allGroupsData
+    .filter(group => !group.isPrivate && !userGroupIds.has(group.id))
+    .slice(0, 20);
 
   useEffect(() => {
     if (currentUser) {
@@ -186,173 +187,48 @@ export default function DashboardPage() {
   }, [currentUser]);
 
   useEffect(() => {
+    if (groupsData) {
+      const formattedGroups: StudyGroup[] = groupsData.map((group) => ({
+        id: group.id,
+        name: group.name,
+        description: group.description || "",
+        members: 0,
+        resources: 0,
+        lastActivity: new Date(group.createdAt),
+        color: groupColors[group.id % groupColors.length],
+        imageUrl: null,
+        owner_id: group.ownerId,
+      }));
+      setStudyGroups(formattedGroups);
+      setLoading(false);
+    }
+  }, [groupsData]);
+
+  useEffect(() => {
+    if (discoverGroupsData) {
+      const formattedGroups: StudyGroup[] = discoverGroupsData.map((group) => ({
+        id: group.id,
+        name: group.name,
+        description: group.description || "",
+        members: 0,
+        resources: 0,
+        lastActivity: new Date(group.createdAt),
+        color: groupColors[group.id % groupColors.length],
+        imageUrl: null,
+        owner_id: group.ownerId,
+      }));
+      setDiscoverGroups(formattedGroups);
+      setDiscoverLoading(false);
+    }
+  }, [discoverGroupsData]);
+
+  useEffect(() => {
     fetchRecentActivities();
     calculateStudyStreak();
   }, []);
 
 
 
-  const fetchGroups = async () => {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
-
-      const { data, error } = await supabase
-        .from("memberships")
-        .select(
-          `
-          group_id,
-          groups (
-            id,
-            name,
-            description,
-            owner_id,
-            is_private,
-            created_at
-          )
-        `,
-        )
-        .eq("user_id", userId);
-
-      if (error) throw error;
-
-      const groupsWithCounts = await Promise.all(
-        (data || []).map(async (membership: any) => {
-          const group = membership.groups;
-          if (!group) return null;
-
-          const { count: memberCount } = await supabase
-            .from("memberships")
-            .select("*", { count: "exact", head: true })
-            .eq("group_id", group.id);
-
-          const { count: messageCount } = await supabase
-            .from("messages")
-            .select("*", { count: "exact", head: true })
-            .eq("group_id", group.id);
-
-          const { data: recentMessage } = await supabase
-            .from("messages")
-            .select("created_at")
-            .eq("group_id", group.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          let lastActivity = new Date(group.created_at);
-          if (recentMessage?.created_at) {
-            lastActivity = new Date(recentMessage.created_at);
-          }
-
-          return {
-            id: group.id,
-            name: group.name,
-            description: group.description || "",
-            members: memberCount || 0,
-            resources: messageCount || 0,
-            lastActivity: lastActivity,
-            color: groupColors[group.id % groupColors.length],
-            imageUrl: null,
-            owner_id: group.owner_id,
-          };
-        }),
-      );
-
-      const formattedGroups: StudyGroup[] = groupsWithCounts.filter(
-        (g) => g !== null,
-      ) as StudyGroup[];
-      setStudyGroups(formattedGroups);
-
-      const total = formattedGroups.reduce(
-        (sum, group) => sum + group.resources,
-        0,
-      );
-      setTotalResources(total);
-    } catch (error) {
-      console.error("Error fetching groups:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchDiscoverGroups = async () => {
-    try {
-      setDiscoverLoading(true);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
-
-      const { data: userMemberships } = await supabase
-        .from("memberships")
-        .select("group_id")
-        .eq("user_id", userId);
-
-      const userGroupIds = new Set(
-        (userMemberships || []).map((m: any) => m.group_id),
-      );
-
-      const { data: allGroups, error } = await supabase
-        .from("groups")
-        .select("id, name, description, owner_id, is_private, created_at")
-        .eq("is_private", false)
-        .order("created_at", { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-
-      const discoverableGroups = (allGroups || [])
-        .filter((group: any) => !userGroupIds.has(group.id))
-        .slice(0, 20);
-
-      const groupsWithCounts = await Promise.all(
-        discoverableGroups.map(async (group: any) => {
-          const { count: memberCount } = await supabase
-            .from("memberships")
-            .select("*", { count: "exact", head: true })
-            .eq("group_id", group.id);
-
-          const { count: messageCount } = await supabase
-            .from("messages")
-            .select("*", { count: "exact", head: true })
-            .eq("group_id", group.id);
-
-          const { data: recentMessage } = await supabase
-            .from("messages")
-            .select("created_at")
-            .eq("group_id", group.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          let lastActivity = new Date(group.created_at);
-          if (recentMessage?.created_at) {
-            lastActivity = new Date(recentMessage.created_at);
-          }
-
-          return {
-            id: group.id,
-            name: group.name,
-            description: group.description || "",
-            members: memberCount || 0,
-            resources: messageCount || 0,
-            lastActivity: lastActivity,
-            color: groupColors[group.id % groupColors.length],
-            imageUrl: null,
-            owner_id: group.owner_id,
-          };
-        }),
-      );
-
-      setDiscoverGroups(groupsWithCounts);
-    } catch (error) {
-      console.error("Error fetching discover groups:", error);
-    } finally {
-      setDiscoverLoading(false);
-    }
-  };
 
   const fetchRecentActivities = async () => {
     try {
@@ -598,7 +474,6 @@ export default function DashboardPage() {
         isPrivate: false,
       });
 
-      // Refresh groups list
       refetchGroups();
       fetchTotalResources();
 
@@ -630,17 +505,24 @@ export default function DashboardPage() {
         return;
       }
 
-      try {
-        await joinGroupMutation.mutateAsync({ groupId });
-        alert("Successfully joined the group!");
-        fetchRecentActivities();
-        fetchTotalResources();
-      } catch (error: any) {
-        if (error?.data?.code === "BAD_REQUEST") {
+      const { error: membershipError } = await supabase
+        .from("memberships")
+        .insert({
+          user_id: currentUser?.id || 0,
+          group_id: groupId,
+        });
+
+      if (membershipError) {
+        if (membershipError.code === "23505") {
           alert("You are already a member of this group!");
         } else {
-          alert("Group not found. Please check the group ID.");
+          alert("Failed to join group. Please check the group ID.");
         }
+      } else {
+        alert("Successfully joined the group!");
+        refetchGroups();
+        fetchRecentActivities();
+        fetchTotalResources();
       }
 
       setIsJoinGroupOpen(false);
@@ -661,7 +543,7 @@ export default function DashboardPage() {
 
       await deleteGroupMutation.mutateAsync({ groupId });
 
-      // Refresh groups list
+      refetchGroups();
       fetchRecentActivities();
       fetchTotalResources();
 
@@ -696,9 +578,7 @@ export default function DashboardPage() {
 
       if (error) throw error;
 
-      // Refresh groups list
-      fetchGroups();
-      fetchDiscoverGroups();
+      refetchGroups();
       fetchRecentActivities();
       fetchTotalResources();
 
@@ -717,40 +597,30 @@ export default function DashboardPage() {
     groupName: string,
   ) => {
     try {
-      // Get current user ID
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
-
-      // Check if user is already a member
-      const { data: existingMembership } = await supabase
-        .from("memberships")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("group_id", groupId)
-        .single();
-
-      if (existingMembership) {
-        alert("You are already a member of this group!");
+      if (!currentUser) {
+        alert("You must be logged in to join a group");
         return;
       }
 
-      // Add user as a member
       const { error: membershipError } = await supabase
         .from("memberships")
         .insert({
-          user_id: userId,
+          user_id: currentUser.id,
           group_id: groupId,
         });
 
-      if (membershipError) throw membershipError;
+      if (membershipError) {
+        if (membershipError.code === "23505") {
+          alert("You are already a member of this group!");
+        } else {
+          throw membershipError;
+        }
+        return;
+      }
 
       alert(`Successfully joined "${groupName}"!`);
 
-      // Refresh groups list
-      fetchGroups();
-      fetchDiscoverGroups();
+      refetchGroups();
       fetchRecentActivities();
       fetchTotalResources();
     } catch (error: unknown) {

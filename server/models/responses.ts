@@ -43,15 +43,18 @@ export const User = z.preprocess(
   }),
 );
 
-export const Group = z.object({
-  id: z.number(),
-  name: z.string(),
-  description: z.string().nullable(),
-  ownerId: z.number(),
-  isPrivate: z.boolean(),
-  createdAt: z.date({ coerce: true }),
-  owner: User.optional(),
-});
+export const Group = z.preprocess(
+  (data) => convertKeysToCamelCase(data),
+  z.object({
+    id: z.number(),
+    name: z.string(),
+    description: z.string().nullable(),
+    ownerId: z.number(),
+    isPrivate: z.boolean(),
+    createdAt: z.date({ coerce: true }),
+    owner: User.optional(),
+  }),
+);
 
 export const Message = z.preprocess(
   (data) => convertKeysToCamelCase(data),

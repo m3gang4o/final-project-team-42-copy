@@ -117,7 +117,7 @@ export default function MyNotesPage() {
     retry: false,
     refetchOnWindowFocus: false,
   });
-  const { data: userGroupsData = [] } = api.groups.getGroups.useQuery();
+  const { data: userGroupsData = [], refetch: refetchUserGroups } = api.groups.getUserGroups.useQuery();
   const { data: personalMessages = [], refetch: refetchPersonal } = api.messages.getMessages.useQuery({ groupId: null });
   
   // Fetch messages for each group - using useQueries would be better but this works
@@ -205,17 +205,23 @@ export default function MyNotesPage() {
 
   useEffect(() => {
     const handleRouteChange = () => {
-      fetchDocuments();
+      refetchPersonal();
+      refetchUserGroups();
+      groupMessagesQueries.forEach(query => query.refetch());
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        fetchDocuments();
+        refetchPersonal();
+        refetchUserGroups();
+        groupMessagesQueries.forEach(query => query.refetch());
       }
     };
 
     const handleFocus = () => {
-      fetchDocuments();
+      refetchPersonal();
+      refetchUserGroups();
+      groupMessagesQueries.forEach(query => query.refetch());
     };
 
     router.events.on("routeChangeComplete", handleRouteChange);
@@ -227,7 +233,7 @@ export default function MyNotesPage() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleFocus);
     };
-  }, [router]);
+  }, [router, refetchPersonal, refetchUserGroups]);
 
 
   const getFileType = (url: string | null): "pdf" | "image" | "text" | null => {
