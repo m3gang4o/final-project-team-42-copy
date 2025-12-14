@@ -176,11 +176,6 @@ export default function DashboardPage() {
     },
   });
 
-  const userGroupIds = new Set(userGroupsForFilter.map(g => g.id));
-  const discoverGroupsData = allGroupsData
-    .filter(group => !group.isPrivate && !userGroupIds.has(group.id))
-    .slice(0, 20);
-
   useEffect(() => {
     if (currentUser) {
       const userId = currentUser.id;
@@ -414,39 +409,26 @@ export default function DashboardPage() {
       return;
     }
 
-    try {
-      // Parse group ID from join code
-      const groupId = parseInt(joinCode.trim());
+    const groupId = parseInt(joinCode.trim());
 
-      if (isNaN(groupId)) {
-        alert("Invalid group ID. Please enter a number.");
-        return;
-      }
-
-      try {
-        await joinGroupMutation.mutateAsync({ groupId });
-        alert("Successfully joined the group!");
-      } catch (error: any) {
-        if (error?.data?.code === "BAD_REQUEST") {
-          alert("You are already a member of this group!");
-        } else {
-          alert("Failed to join group. Please check the group ID.");
-        }
-      } else {
-        alert("Successfully joined the group!");
-        refetchGroups();
-        fetchRecentActivities();
-        fetchTotalResources();
-      }
-
-      setIsJoinGroupOpen(false);
-      setJoinCode("");
-    } catch (error: unknown) {
-      console.error("Error joining group:", error);
-      alert(
-        `Failed to join group: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
+    if (isNaN(groupId)) {
+      alert("Invalid group ID. Please enter a number.");
+      return;
     }
+
+    try {
+      await joinGroupMutation.mutateAsync({ groupId });
+      alert("Successfully joined the group!");
+    } catch (error: any) {
+      if (error?.data?.code === "BAD_REQUEST") {
+        alert("You are already a member of this group!");
+      } else {
+        alert("Failed to join group. Please check the group ID.");
+      }
+    }
+
+    setIsJoinGroupOpen(false);
+    setJoinCode("");
   };
 
   const handleDeleteGroup = async () => {
