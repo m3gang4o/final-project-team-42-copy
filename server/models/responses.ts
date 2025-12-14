@@ -23,13 +23,25 @@ function convertKeysToCamelCase<T>(input: T): T {
   return input;
 }
 
-export const User = z.object({
-  id: z.number(),
-  name: z.string(),
-  email: z.string(),
-  avatarUrl: z.string().nullable(),
-  createdAt: z.date({ coerce: true }),
-});
+export const User = z.preprocess(
+  (data) => {
+    const converted = convertKeysToCamelCase(data);
+    if (converted && typeof converted === 'object' && 'id' in converted) {
+      const obj = converted as any;
+      if (typeof obj.id === 'string') {
+        obj.id = parseInt(obj.id, 10);
+      }
+    }
+    return converted;
+  },
+  z.object({
+    id: z.number(),
+    name: z.string(),
+    email: z.string(),
+    avatarUrl: z.string().nullable().optional(),
+    createdAt: z.coerce.date(),
+  }),
+);
 
 export const Group = z.object({
   id: z.number(),

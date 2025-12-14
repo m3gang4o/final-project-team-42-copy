@@ -142,7 +142,10 @@ export default function DashboardPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const { data: currentUser } = api.users.getCurrentUser.useQuery();
+  const { data: currentUser } = api.users.getCurrentUser.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
   const { data: groupsData = [], refetch: refetchGroups } = api.groups.getGroups.useQuery();
   const { data: discoverGroupsData = [] } = api.groups.discoverGroups.useQuery();
   const createGroupMutation = api.groups.createGroup.useMutation({
@@ -587,21 +590,6 @@ export default function DashboardPage() {
     if (!groupName || !course || !description) return;
 
     try {
-      // First, ensure we have a default user (for testing without auth)
-      const { data: existingUser } = await supabase
-        .from("users")
-        .select("id")
-        .eq("id", 1)
-        .single();
-
-      if (!existingUser) {
-        // Create default user if doesn't exist
-        await supabase.from("users").insert({
-          id: 1,
-          name: "Test User",
-          email: "test@example.com",
-        });
-      }
 
       // Create the group using tRPC
       await createGroupMutation.mutateAsync({

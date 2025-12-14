@@ -1,3 +1,4 @@
+import { api } from "@/utils/trpc/api";
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { createSupabaseComponentClient } from "@/utils/supabase/clients/component";
@@ -31,6 +32,7 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const createUserMutation = api.users.createUser.useMutation();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,10 +57,9 @@ export default function SignupPage() {
       });
       if (error) throw error;
 
-      // Create user in users table
       if (data.user) {
-        await supabase.from("users").insert({
-          id: parseInt(data.user.id.substring(0, 8), 16), // Convert UUID to int for compatibility
+        await createUserMutation.mutateAsync({
+          id: parseInt(data.user.id.substring(0, 8), 16),
           name: username,
           email: email,
         });

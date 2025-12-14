@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import { createSupabaseComponentClient } from "@/utils/supabase/clients/component";
+import { api } from "@/utils/trpc/api";
 import {
   Book,
   Home,
@@ -49,6 +50,11 @@ export default function SettingsPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { data: currentUser, isLoading: loadingCurrentUser } = api.users.getCurrentUser.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const updateUserMutation = api.users.updateUser.useMutation();
 
   const fetchUserData = useCallback(async () => {
     try {
@@ -61,46 +67,6 @@ export default function SettingsPage() {
           ? parseInt(user.id.substring(0, 8), 16)
           : null;
         setUserId(dbUserId);
-
-        if (dbUserId) {
-          // Fetch user data from database
-          const { data: dbUser, error: dbError } = await supabase
-            .from("users")
-            .select("name, avatar_url")
-            .eq("id", dbUserId)
-            .single();
-
-          if (!dbError && dbUser) {
-            setUserName(
-              dbUser.name ||
-                user.user_metadata?.name ||
-                user.email?.split("@")[0] ||
-                "User",
-            );
-            // If avatar_url is stored as a path, convert it to a full URL
-            if (dbUser.avatar_url) {
-              if (dbUser.avatar_url.startsWith("http")) {
-                // Already a full URL
-                setAvatarUrl(dbUser.avatar_url);
-              } else {
-                // It's a path, get the public URL from group-files bucket
-                const {
-                  data: { publicUrl },
-                } = supabase.storage
-                  .from("group-files")
-                  .getPublicUrl(dbUser.avatar_url);
-                setAvatarUrl(publicUrl);
-              }
-            } else {
-              setAvatarUrl(null);
-            }
-          } else {
-            setUserName(
-              user.user_metadata?.name || user.email?.split("@")[0] || "User",
-            );
-            setAvatarUrl(null);
-          }
-        }
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -112,6 +78,22 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchUserData();
   }, [fetchUserData]);
+
+  useEffect(() => {
+  if (currentUser) {
+    setUserName(currentUser.name);
+    if (currentUser.avatarUrl) {
+      if (currentUser.avatarUrl.startsWith("http")) {
+        setAvatarUrl(currentUser.avatarUrl);
+      } else {
+        const { data: { publicUrl } } = supabase.storage.from("group-files").getPublicUrl(currentUser.avatarUrl);
+        setAvatarUrl(publicUrl);
+      }
+    } else {
+      setAvatarUrl(null);
+    }
+  }
+}, [currentUser, supabase]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -207,15 +189,10 @@ export default function SettingsPage() {
       }
 
       // Update user in database
-      const { error: updateError } = await supabase
-        .from("users")
-        .update({
-          name: userName,
-          avatar_url: newAvatarUrl,
-        })
-        .eq("id", userId);
-
-      if (updateError) throw updateError;
+      await updateUserMutation.mutateAsync({
+        name: userName,
+        avatarUrl: newAvatarUrl,
+      });
 
       // Update auth metadata
       const { error: authError } = await supabase.auth.updateUser({
@@ -262,7 +239,7 @@ export default function SettingsPage() {
     setAvatarUrl(null);
   };
 
-  if (loading) {
+  if (loading || loadingCurrentUser) {
     return (
       <div className="bg-background flex min-h-screen items-center justify-center">
         <div className="text-center">

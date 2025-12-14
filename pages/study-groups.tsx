@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 import Head from "next/head";
+import { api } from "@/utils/trpc/api";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,66 +100,33 @@ export default function GroupsPage({
     userGroups.find((g) => g.id === selectedGroupId) ??
     groups.find((g) => g.id === selectedGroupId) ??
     null;
+  const { data: currentUser } = api.users.getCurrentUser.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
 
   const handleSelectGroup = (group: Group) => {
     setSelectedGroupId(group.id);
   };
 
   const fetchUser = async () => {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-      if (!user) {
-        setUserName("Guest");
-        setUserEmail("");
-        setUserAvatarUrl(null);
-        return;
-      }
-
-      // We store name & avatar in our own `users` table keyed by numeric id
-      const userId = user.id ? parseInt(user.id.substring(0, 8), 16) : 1;
-      setUserEmail(user.email || "");
-
-      if (userId) {
-        const { data: dbUser, error: dbError } = await supabase
-          .from("users")
-          .select("name, avatar_url")
-          .eq("id", userId)
-          .single();
-
-        if (!dbError && dbUser) {
-          const fallbackName =
-            user.user_metadata?.name || user.email?.split("@")[0] || "User";
-
-          setUserName(dbUser.name || fallbackName);
-
-          if (dbUser.avatar_url) {
-            if (dbUser.avatar_url.startsWith("http")) {
-              setUserAvatarUrl(dbUser.avatar_url);
-            } else {
-              const {
-                data: { publicUrl },
-              } = supabase.storage
-                .from("group-files")
-                .getPublicUrl(dbUser.avatar_url);
-              setUserAvatarUrl(publicUrl);
-            }
-          } else {
-            setUserAvatarUrl(null);
-          }
-        } else {
-          const name =
-            user.user_metadata?.name || user.email?.split("@")[0] || "User";
-          setUserName(name);
-          setUserAvatarUrl(null);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching user:", error);
+    if (!user) {
+      setUserName("Guest");
+      setUserEmail("");
+      setUserAvatarUrl(null);
+      return;
     }
-  };
+
+    setUserEmail(user.email || "");
+  } catch (error) {
+    console.error("Error fetching user:", error);
+  }
+};
 
   // initial load + keep user info fresh on route/visibility/focus
   useEffect(() => {
@@ -188,6 +156,26 @@ export default function GroupsPage({
       window.removeEventListener("focus", handleFocus);
     };
   }, [router, supabase]);
+
+  useEffect(() => {
+  if (currentUser) {
+    setUserName(currentUser.name);
+    if (currentUser.avatarUrl) {
+      if (currentUser.avatarUrl.startsWith("http")) {
+        setUserAvatarUrl(currentUser.avatarUrl);
+      } else {
+        const {
+          data: { publicUrl },
+        } = supabase.storage
+          .from("group-files")
+          .getPublicUrl(currentUser.avatarUrl);
+        setUserAvatarUrl(publicUrl);
+      }
+    } else {
+      setUserAvatarUrl(null);
+    }
+  }
+}, [currentUser, supabase]);
 
   const fetchGroups = async () => {
     try {

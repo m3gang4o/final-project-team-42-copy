@@ -113,7 +113,10 @@ export default function MyNotesPage() {
   const [isViewContentOpen, setIsViewContentOpen] = useState(false);
   const [documentToView, setDocumentToView] = useState<Document | null>(null);
 
-  const { data: currentUser } = api.users.getCurrentUser.useQuery();
+  const { data: currentUser } = api.users.getCurrentUser.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
   const { data: userGroupsData = [] } = api.groups.getGroups.useQuery();
   const { data: personalMessages = [], refetch: refetchPersonal } = api.messages.getMessages.useQuery({ groupId: null });
   
