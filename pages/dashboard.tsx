@@ -146,22 +146,27 @@ export default function DashboardPage() {
     retry: false,
     refetchOnWindowFocus: false,
   });
-  const { data: groupsData = [], refetch: refetchGroups, error: groupsError } = api.groups.getGroups.useQuery();
-  const { data: discoverGroupsData = [], refetch: refetchDiscoverGroups, error: discoverError } = api.groups.discoverGroups.useQuery();
+  const { data: groupsDataRaw, refetch: refetchGroups, error: groupsError } = api.groups.getGroups.useQuery();
+  const groupsData = useMemo(() => groupsDataRaw || [], [groupsDataRaw]);
+
+  const { data: discoverGroupsDataRaw, refetch: refetchDiscoverGroups, error: discoverError } = api.groups.discoverGroups.useQuery();
+  const discoverGroupsData = useMemo(() => discoverGroupsDataRaw || [], [discoverGroupsDataRaw]);
 
   // Get member counts for user's groups via tRPC
-  const userGroupIds = groupsData.map((g) => g.id);
-  const { data: userGroupMemberCounts = {} } = api.memberships.getMemberCountsForGroups.useQuery(
+  const userGroupIds = useMemo(() => groupsData.map((g) => g.id), [groupsData]);
+  const { data: userGroupMemberCountsRaw } = api.memberships.getMemberCountsForGroups.useQuery(
     { groupIds: userGroupIds },
     { enabled: userGroupIds.length > 0 }
   );
+  const userGroupMemberCounts = useMemo(() => userGroupMemberCountsRaw || {}, [userGroupMemberCountsRaw]);
 
   // Get member counts for discover groups via tRPC
-  const discoverGroupIds = discoverGroupsData.map((g) => g.id);
-  const { data: discoverGroupMemberCounts = {} } = api.memberships.getMemberCountsForGroups.useQuery(
+  const discoverGroupIds = useMemo(() => discoverGroupsData.map((g) => g.id), [discoverGroupsData]);
+  const { data: discoverGroupMemberCountsRaw } = api.memberships.getMemberCountsForGroups.useQuery(
     { groupIds: discoverGroupIds },
     { enabled: discoverGroupIds.length > 0 }
   );
+  const discoverGroupMemberCounts = useMemo(() => discoverGroupMemberCountsRaw || {}, [discoverGroupMemberCountsRaw]);
   
   useEffect(() => {
     if (groupsError) console.error("Groups error:", groupsError);

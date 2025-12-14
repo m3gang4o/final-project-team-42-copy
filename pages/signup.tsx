@@ -168,78 +168,80 @@ export default function SignupPage() {
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="signup" className="mt-4 space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
-                  <div className="relative">
-                    <User className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
-                    <Input
-                      id="username"
-                      type="text"
-                      placeholder="John Doe"
-                      className="pl-10"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                    />
+              <TabsContent value="signup" className="mt-4">
+                <form onSubmit={handleSignup} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="username">Username</Label>
+                    <div className="relative">
+                      <User className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
+                      <Input
+                        id="username"
+                        type="text"
+                        placeholder="John Doe"
+                        className="pl-10"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                      />
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <Mail className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Please Enter Email"
-                      className="pl-10"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <div className="relative">
+                      <Mail className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="Please Enter Email"
+                        className="pl-10"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      Must be a valid email address!
+                    </p>
                   </div>
-                  <p className="text-muted-foreground text-xs">
-                    Must be a valid email address!
-                  </p>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
-                    <Lock className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Please Enter Password"
-                      className="pl-10"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <div className="relative">
+                      <Lock className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="Please Enter Password"
+                        className="pl-10"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm Password</Label>
-                  <div className="relative">
-                    <Lock className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
-                    <Input
-                      id="confirm-password"
-                      type="password"
-                      placeholder="Please Confirm Password"
-                      className="pl-10"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                    />
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirm Password</Label>
+                    <div className="relative">
+                      <Lock className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
+                      <Input
+                        id="confirm-password"
+                        type="password"
+                        placeholder="Please Confirm Password"
+                        className="pl-10"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                      />
+                    </div>
                   </div>
-                </div>
 
-                {error && <p className="text-sm text-red-600">{error}</p>}
-                <Button
-                  onClick={handleSignup}
-                  disabled={loading}
-                  className="mt-2 h-10 w-full bg-blue-600 text-white hover:bg-blue-700"
-                >
-                  {loading ? "Creating Account..." : "Create Account"}
-                </Button>
+                  {error && <p className="text-sm text-red-600">{error}</p>}
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="mt-2 h-10 w-full bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    {loading ? "Creating Account..." : "Create Account"}
+                  </Button>
+                </form>
               </TabsContent>
             </Tabs>
           </CardContent>

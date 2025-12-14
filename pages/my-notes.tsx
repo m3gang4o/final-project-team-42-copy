@@ -117,8 +117,10 @@ export default function MyNotesPage() {
     retry: false,
     refetchOnWindowFocus: false,
   });
-  const { data: userGroupsData = [] } = api.groups.getGroups.useQuery();
-  const { data: personalMessages = [], refetch: refetchPersonal } = api.messages.getMessages.useQuery({ groupId: null });
+  const { data: userGroupsDataRaw } = api.groups.getGroups.useQuery();
+  const userGroupsData = useMemo(() => userGroupsDataRaw || [], [userGroupsDataRaw]);
+  const { data: personalMessagesRaw, refetch: refetchPersonal } = api.messages.getMessages.useQuery({ groupId: null });
+  const personalMessages = useMemo(() => personalMessagesRaw || [], [personalMessagesRaw]);
   
   // Fetch messages for each group
   const group1Query = api.messages.getMessages.useQuery({ groupId: userGroupsData[0]?.id ?? -1 }, { enabled: !!userGroupsData[0] });
