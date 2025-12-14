@@ -4,6 +4,18 @@ const snakeToCamelCase = (str: string): string => {
   return str.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
 };
 
+function parseDate(val: unknown): Date {
+  if (val instanceof Date) return val;
+  if (typeof val === 'string' || typeof val === 'number') {
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) return d;
+  }
+  if (val && typeof val === 'object' && 'toISOString' in val) {
+    return new Date((val as { toISOString: () => string }).toISOString());
+  }
+  return new Date();
+}
+
 function convertKeysToCamelCase<T>(input: T): T {
   if (Array.isArray(input)) {
     return input.map(convertKeysToCamelCase) as unknown as T;
@@ -23,58 +35,54 @@ function convertKeysToCamelCase<T>(input: T): T {
   return input;
 }
 
+const dateSchema = z.any().transform((val) => parseDate(val));
+
 export const User = z.preprocess(
-  (data) => {
-    const converted = convertKeysToCamelCase(data);
-    if (converted && typeof converted === 'object' && 'id' in converted) {
-      const obj = converted as any;
-      if (typeof obj.id === 'string') {
-        obj.id = parseInt(obj.id, 10);
-      }
-    }
-    return converted;
-  },
+  (data) => convertKeysToCamelCase(data),
   z.object({
-    id: z.number(),
+    id: z.coerce.number(),
     name: z.string(),
     email: z.string(),
     avatarUrl: z.string().nullable().optional(),
-    createdAt: z.coerce.date(),
+    createdAt: dateSchema,
   }),
 );
 
-export const Group = z.object({
-  id: z.number(),
-  name: z.string(),
-  description: z.string().nullable(),
-  ownerId: z.number(),
-  isPrivate: z.boolean(),
-  createdAt: z.date({ coerce: true }),
-  owner: User.optional(),
-});
+export const Group = z.preprocess(
+  (data) => convertKeysToCamelCase(data),
+  z.object({
+    id: z.coerce.number(),
+    name: z.string(),
+    description: z.string().nullable(),
+    ownerId: z.coerce.number(),
+    isPrivate: z.boolean(),
+    createdAt: dateSchema,
+    owner: User.optional(),
+  }),
+);
 
 export const Message = z.preprocess(
   (data) => convertKeysToCamelCase(data),
   z.object({
-    id: z.number(),
+    id: z.coerce.number(),
     message: z.string().nullable(),
     attachmentUrl: z.string().nullable(),
-    createdAt: z.date({ coerce: true }),
-    authorId: z.number(),
-    groupId: z.number().nullable(),
-    author: User.optional(),
-    group: Group.optional(),
+    createdAt: dateSchema,
+    authorId: z.coerce.number(),
+    groupId: z.coerce.number().nullable(),
+    author: User.optional().nullable(),
+    group: Group.optional().nullable(),
   }),
 );
 
 export const Membership = z.preprocess(
   (data) => convertKeysToCamelCase(data),
   z.object({
-    id: z.number(),
-    userId: z.number(),
-    groupId: z.number(),
+    id: z.coerce.number(),
+    userId: z.coerce.number(),
+    groupId: z.coerce.number(),
     role: z.string(),
-    joinedAt: z.date({ coerce: true }),
+    joinedAt: dateSchema,
     user: User.optional(),
     group: Group.optional(),
   }),

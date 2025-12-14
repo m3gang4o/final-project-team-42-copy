@@ -146,8 +146,13 @@ export default function DashboardPage() {
     retry: false,
     refetchOnWindowFocus: false,
   });
-  const { data: groupsData = [], refetch: refetchGroups } = api.groups.getGroups.useQuery();
-  const { data: discoverGroupsData = [] } = api.groups.discoverGroups.useQuery();
+  const { data: groupsData = [], refetch: refetchGroups, error: groupsError } = api.groups.getGroups.useQuery();
+  const { data: discoverGroupsData = [], refetch: refetchDiscoverGroups, error: discoverError } = api.groups.discoverGroups.useQuery();
+  
+  useEffect(() => {
+    if (groupsError) console.error("Groups error:", groupsError);
+    if (discoverError) console.error("Discover error:", discoverError);
+  }, [groupsError, discoverError]);
   const createGroupMutation = api.groups.createGroup.useMutation({
     onSuccess: () => {
       refetchGroups();
@@ -156,11 +161,18 @@ export default function DashboardPage() {
   const joinGroupMutation = api.groups.joinGroup.useMutation({
     onSuccess: () => {
       refetchGroups();
+      refetchDiscoverGroups();
     },
   });
   const deleteGroupMutation = api.groups.deleteGroup.useMutation({
     onSuccess: () => {
       refetchGroups();
+    },
+  });
+  const leaveGroupMutation = api.memberships.leaveGroup.useMutation({
+    onSuccess: () => {
+      refetchGroups();
+      refetchDiscoverGroups();
     },
   });
 
@@ -186,279 +198,57 @@ export default function DashboardPage() {
   }, [currentUser]);
 
   useEffect(() => {
-    fetchRecentActivities();
     calculateStudyStreak();
   }, []);
 
-
-
-  const fetchGroups = async () => {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
-
-      const { data, error } = await supabase
-        .from("memberships")
-        .select(
-          `
-          group_id,
-          groups (
-            id,
-            name,
-            description,
-            owner_id,
-            is_private,
-            created_at
-          )
-        `,
-        )
-        .eq("user_id", userId);
-
-      if (error) throw error;
-
-      const groupsWithCounts = await Promise.all(
-        (data || []).map(async (membership: any) => {
-          const group = membership.groups;
-          if (!group) return null;
-
-          const { count: memberCount } = await supabase
-            .from("memberships")
-            .select("*", { count: "exact", head: true })
-            .eq("group_id", group.id);
-
-          const { count: messageCount } = await supabase
-            .from("messages")
-            .select("*", { count: "exact", head: true })
-            .eq("group_id", group.id);
-
-          const { data: recentMessage } = await supabase
-            .from("messages")
-            .select("created_at")
-            .eq("group_id", group.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          let lastActivity = new Date(group.created_at);
-          if (recentMessage?.created_at) {
-            lastActivity = new Date(recentMessage.created_at);
-          }
-
-          return {
-            id: group.id,
-            name: group.name,
-            description: group.description || "",
-            members: memberCount || 0,
-            resources: messageCount || 0,
-            lastActivity: lastActivity,
-            color: groupColors[group.id % groupColors.length],
-            imageUrl: null,
-            owner_id: group.owner_id,
-          };
-        }),
-      );
-
-      const formattedGroups: StudyGroup[] = groupsWithCounts.filter(
-        (g) => g !== null,
-      ) as StudyGroup[];
+  useEffect(() => {
+    const colors = [
+      "bg-blue-500", "bg-green-500", "bg-purple-500", "bg-orange-500",
+      "bg-pink-500", "bg-yellow-500", "bg-red-500", "bg-indigo-500",
+    ];
+    if (groupsData && groupsData.length > 0) {
+      const formattedGroups: StudyGroup[] = groupsData.map((group) => ({
+        id: group.id,
+        name: group.name,
+        description: group.description || "",
+        members: 0,
+        resources: 0,
+        lastActivity: new Date(group.createdAt),
+        color: colors[group.id % colors.length],
+        imageUrl: null,
+        owner_id: group.ownerId,
+      }));
       setStudyGroups(formattedGroups);
-
-      const total = formattedGroups.reduce(
-        (sum, group) => sum + group.resources,
-        0,
-      );
-      setTotalResources(total);
-    } catch (error) {
-      console.error("Error fetching groups:", error);
-    } finally {
+      setLoading(false);
+    } else if (groupsData && groupsData.length === 0) {
+      setStudyGroups([]);
       setLoading(false);
     }
-  };
+  }, [groupsData]);
 
-  const fetchDiscoverGroups = async () => {
-    try {
-      setDiscoverLoading(true);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
-
-      const { data: userMemberships } = await supabase
-        .from("memberships")
-        .select("group_id")
-        .eq("user_id", userId);
-
-      const userGroupIds = new Set(
-        (userMemberships || []).map((m: any) => m.group_id),
-      );
-
-      const { data: allGroups, error } = await supabase
-        .from("groups")
-        .select("id, name, description, owner_id, is_private, created_at")
-        .eq("is_private", false)
-        .order("created_at", { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-
-      const discoverableGroups = (allGroups || [])
-        .filter((group: any) => !userGroupIds.has(group.id))
-        .slice(0, 20);
-
-      const groupsWithCounts = await Promise.all(
-        discoverableGroups.map(async (group: any) => {
-          const { count: memberCount } = await supabase
-            .from("memberships")
-            .select("*", { count: "exact", head: true })
-            .eq("group_id", group.id);
-
-          const { count: messageCount } = await supabase
-            .from("messages")
-            .select("*", { count: "exact", head: true })
-            .eq("group_id", group.id);
-
-          const { data: recentMessage } = await supabase
-            .from("messages")
-            .select("created_at")
-            .eq("group_id", group.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          let lastActivity = new Date(group.created_at);
-          if (recentMessage?.created_at) {
-            lastActivity = new Date(recentMessage.created_at);
-          }
-
-          return {
-            id: group.id,
-            name: group.name,
-            description: group.description || "",
-            members: memberCount || 0,
-            resources: messageCount || 0,
-            lastActivity: lastActivity,
-            color: groupColors[group.id % groupColors.length],
-            imageUrl: null,
-            owner_id: group.owner_id,
-          };
-        }),
-      );
-
-      setDiscoverGroups(groupsWithCounts);
-    } catch (error) {
-      console.error("Error fetching discover groups:", error);
-    } finally {
-      setDiscoverLoading(false);
+  useEffect(() => {
+    const colors = [
+      "bg-blue-500", "bg-green-500", "bg-purple-500", "bg-orange-500",
+      "bg-pink-500", "bg-yellow-500", "bg-red-500", "bg-indigo-500",
+    ];
+    if (discoverGroupsData && discoverGroupsData.length > 0) {
+      const formattedGroups: StudyGroup[] = discoverGroupsData.map((group) => ({
+        id: group.id,
+        name: group.name,
+        description: group.description || "",
+        members: 0,
+        resources: 0,
+        lastActivity: new Date(group.createdAt),
+        color: colors[group.id % colors.length],
+        imageUrl: null,
+        owner_id: group.ownerId,
+      }));
+      setDiscoverGroups(formattedGroups);
     }
-  };
+  }, [discoverGroupsData]);
 
-  const fetchRecentActivities = async () => {
-    try {
-      setActivitiesLoading(true);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
 
-      const { data: userMemberships } = await supabase
-        .from("memberships")
-        .select("group_id")
-        .eq("user_id", userId);
 
-      if (!userMemberships || userMemberships.length === 0) {
-        setRecentActivities([]);
-        return;
-      }
-
-      const userGroupIds = userMemberships.map((m: any) => m.group_id);
-
-      const { data: messages, error } = await supabase
-        .from("messages")
-        .select(
-          `
-          id,
-          group_id,
-          author_id,
-          message,
-          attachment_url,
-          created_at,
-          groups!messages_group_id_fkey(
-            id,
-            name
-          ),
-          author:users!messages_author_id_fkey(
-            id,
-            name
-          )
-        `,
-        )
-        .in("group_id", userGroupIds)
-        .order("created_at", { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-
-      const activities: RecentActivity[] = (messages || []).map((msg: any) => {
-        const group = Array.isArray(msg.groups) ? msg.groups[0] : msg.groups;
-        const author = Array.isArray(msg.author) ? msg.author[0] : msg.author;
-        const groupId = group?.id || msg.group_id;
-        const activityType = msg.attachment_url ? "attachment" : "message";
-
-        return {
-          id: msg.id,
-          groupId: groupId,
-          groupName: group?.name || "Unknown Group",
-          groupColor: groupColors[groupId % groupColors.length],
-          authorName: author?.name || "Anonymous",
-          authorId: author?.id || msg.author_id,
-          message: msg.message,
-          attachmentUrl: msg.attachment_url,
-          createdAt: new Date(msg.created_at),
-          activityType: activityType,
-        };
-      });
-
-      setRecentActivities(activities);
-    } catch (error) {
-      console.error("Error fetching recent activities:", error);
-    } finally {
-      setActivitiesLoading(false);
-    }
-  };
-
-  const fetchTotalResources = async () => {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
-
-      // Get all groups that the user is a member of
-      const { data: userMemberships } = await supabase
-        .from("memberships")
-        .select("group_id")
-        .eq("user_id", userId);
-
-      if (!userMemberships || userMemberships.length === 0) {
-        setTotalResources(0);
-        return;
-      }
-
-      const userGroupIds = userMemberships.map((m: any) => m.group_id);
-
-      // Get total message count across all user's groups
-      const { count: totalMessageCount } = await supabase
-        .from("messages")
-        .select("*", { count: "exact", head: true })
-        .in("group_id", userGroupIds);
-
-      setTotalResources(totalMessageCount || 0);
-    } catch (error) {
-      console.error("Error fetching total resources:", error);
-    }
-  };
 
   const calculateStudyStreak = async () => {
     try {
@@ -600,7 +390,6 @@ export default function DashboardPage() {
 
       // Refresh groups list
       refetchGroups();
-      fetchTotalResources();
 
       setIsCreateGroupOpen(false);
       setGroupName("");
@@ -633,8 +422,6 @@ export default function DashboardPage() {
       try {
         await joinGroupMutation.mutateAsync({ groupId });
         alert("Successfully joined the group!");
-        fetchRecentActivities();
-        fetchTotalResources();
       } catch (error: any) {
         if (error?.data?.code === "BAD_REQUEST") {
           alert("You are already a member of this group!");
@@ -661,10 +448,6 @@ export default function DashboardPage() {
 
       await deleteGroupMutation.mutateAsync({ groupId });
 
-      // Refresh groups list
-      fetchRecentActivities();
-      fetchTotalResources();
-
       setDeleteDialogOpen(false);
       setSelectedGroupForDelete(null);
     } catch (error: unknown) {
@@ -680,28 +463,7 @@ export default function DashboardPage() {
 
     try {
       const groupId = selectedGroupForLeave.id;
-
-      // Get current user ID
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
-
-      // Remove the user's membership
-      const { error } = await supabase
-        .from("memberships")
-        .delete()
-        .eq("user_id", userId)
-        .eq("group_id", groupId);
-
-      if (error) throw error;
-
-      // Refresh groups list
-      fetchGroups();
-      fetchDiscoverGroups();
-      fetchRecentActivities();
-      fetchTotalResources();
-
+      await leaveGroupMutation.mutateAsync({ groupId });
       setLeaveDialogOpen(false);
       setSelectedGroupForLeave(null);
     } catch (error: unknown) {
@@ -717,42 +479,8 @@ export default function DashboardPage() {
     groupName: string,
   ) => {
     try {
-      // Get current user ID
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
-
-      // Check if user is already a member
-      const { data: existingMembership } = await supabase
-        .from("memberships")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("group_id", groupId)
-        .single();
-
-      if (existingMembership) {
-        alert("You are already a member of this group!");
-        return;
-      }
-
-      // Add user as a member
-      const { error: membershipError } = await supabase
-        .from("memberships")
-        .insert({
-          user_id: userId,
-          group_id: groupId,
-        });
-
-      if (membershipError) throw membershipError;
-
+      await joinGroupMutation.mutateAsync({ groupId });
       alert(`Successfully joined "${groupName}"!`);
-
-      // Refresh groups list
-      fetchGroups();
-      fetchDiscoverGroups();
-      fetchRecentActivities();
-      fetchTotalResources();
     } catch (error: unknown) {
       console.error("Error joining group:", error);
       alert(

@@ -23,8 +23,8 @@ async function enforceGroupMembership(
 
   const membership = await db.query.membershipsTable.findFirst({
     where: and(
-      eq(membershipsTable.userId, userId),
-      eq(membershipsTable.groupId, groupId),
+      eq(membershipsTable.user_id, userId),
+      eq(membershipsTable.group_id, groupId),
     ),
   });
 
@@ -49,19 +49,19 @@ const getMessages = protectedProcedure
 
     const messages = await db.query.messagesTable.findMany({
       where: groupId !== null 
-        ? eq(messagesTable.groupId, groupId)
+        ? eq(messagesTable.group_id, groupId)
         : and(
-            isNull(messagesTable.groupId),
-            eq(messagesTable.authorId, userId),
+            isNull(messagesTable.group_id),
+            eq(messagesTable.author_id, userId),
           ),
-      orderBy: [asc(messagesTable.createdAt)],
+      orderBy: [asc(messagesTable.created_at)],
       columns: {
         id: true,
         message: true,
-        attachmentUrl: true,
-        createdAt: true,
-        authorId: true,
-        groupId: true,
+        attachment_url: true,
+        created_at: true,
+        author_id: true,
+        group_id: true,
       },
       with: {
         author: {
@@ -69,8 +69,8 @@ const getMessages = protectedProcedure
             id: true,
             name: true,
             email: true,
-            avatarUrl: true,
-            createdAt: true,
+            avatar_url: true,
+            created_at: true,
           },
         },
         group: {
@@ -78,9 +78,9 @@ const getMessages = protectedProcedure
             id: true,
             name: true,
             description: true,
-            ownerId: true,
-            isPrivate: true,
-            createdAt: true,
+            owner_id: true,
+            is_private: true,
+            created_at: true,
           },
         },
       },
@@ -111,18 +111,18 @@ const sendMessage = protectedProcedure
     const [newMessage] = await db
       .insert(messagesTable)
       .values({
-        groupId: groupId ?? null,
-        authorId: userId,
+        group_id: groupId ?? null,
+        author_id: userId,
         message: message ?? null,
-        attachmentUrl: attachmentUrl ?? null,
+        attachment_url: attachmentUrl ?? null,
       })
       .returning({
         id: messagesTable.id,
         message: messagesTable.message,
-        attachmentUrl: messagesTable.attachmentUrl,
-        createdAt: messagesTable.createdAt,
-        authorId: messagesTable.authorId,
-        groupId: messagesTable.groupId,
+        attachment_url: messagesTable.attachment_url,
+        created_at: messagesTable.created_at,
+        author_id: messagesTable.author_id,
+        group_id: messagesTable.group_id,
       });
 
     const fullMessage = await db.query.messagesTable.findFirst({
@@ -130,10 +130,10 @@ const sendMessage = protectedProcedure
       columns: {
         id: true,
         message: true,
-        attachmentUrl: true,
-        createdAt: true,
-        authorId: true,
-        groupId: true,
+        attachment_url: true,
+        created_at: true,
+        author_id: true,
+        group_id: true,
       },
       with: {
         author: {
@@ -141,8 +141,8 @@ const sendMessage = protectedProcedure
             id: true,
             name: true,
             email: true,
-            avatarUrl: true,
-            createdAt: true,
+            avatar_url: true,
+            created_at: true,
           },
         },
         group: {
@@ -150,9 +150,9 @@ const sendMessage = protectedProcedure
             id: true,
             name: true,
             description: true,
-            ownerId: true,
-            isPrivate: true,
-            createdAt: true,
+            owner_id: true,
+            is_private: true,
+            created_at: true,
           },
         },
       },
@@ -178,8 +178,8 @@ const deleteMessage = protectedProcedure
     const message = await db.query.messagesTable.findFirst({
       where: eq(messagesTable.id, messageId),
       columns: {
-        authorId: true,
-        groupId: true,
+        author_id: true,
+        group_id: true,
       },
     });
 
@@ -189,14 +189,14 @@ const deleteMessage = protectedProcedure
       });
     }
 
-    if (message.authorId !== userId) {
+    if (message.author_id !== userId) {
       throw new TRPCError({
         code: "FORBIDDEN",
       });
     }
 
-    if (message.groupId !== null) {
-      await enforceGroupMembership(subject, message.groupId);
+    if (message.group_id !== null) {
+      await enforceGroupMembership(subject, message.group_id);
     }
 
     await db.delete(messagesTable).where(eq(messagesTable.id, messageId));

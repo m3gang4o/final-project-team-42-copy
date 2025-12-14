@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createSupabaseComponentClient } from "@/utils/supabase/clients/component";
+import { api } from "@/utils/trpc/api";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -300,6 +301,14 @@ export function GroupChat({ group, user, authorId }: GroupChatProps) {
     refreshMessages();
   }, [group.id]);
 
+  const sendMessageMutation = api.messages.sendMessage.useMutation({
+    onSuccess: () => {
+      setDraftText("");
+      setSelectedFile(null);
+      refreshMessages();
+    },
+  });
+
   const publishMessage = async () => {
     if (!draftText.trim() && !selectedFile) {
       return;
@@ -321,18 +330,11 @@ export function GroupChat({ group, user, authorId }: GroupChatProps) {
         });
       }
 
-      const { error } = await supabase.from("messages").insert({
+      await sendMessageMutation.mutateAsync({
+        groupId: group.id,
         message: draftText || selectedFile?.name || "Untitled",
-        attachment_url: attachmentUrl,
-        author_id: authorId,
-        group_id: group.id,
+        attachmentUrl: attachmentUrl,
       });
-
-      if (error) throw error;
-
-      setDraftText("");
-      setSelectedFile(null);
-      await refreshMessages();
     } catch (err) {
       console.error("Error publishing message:", err);
     } finally {
@@ -354,16 +356,15 @@ export function GroupChat({ group, user, authorId }: GroupChatProps) {
     (m) => !onlineMembers.includes(m.id),
   );
 
+  const deleteMessageMutation = api.messages.deleteMessage.useMutation({
+    onSuccess: () => {
+      refreshMessages();
+    },
+  });
+
   const handleDeleteMessage = async (messageId: number) => {
     try {
-      const { error } = await supabase
-        .from("messages")
-        .delete()
-        .eq("id", messageId);
-
-      if (error) throw error;
-
-      // Optimistically update local state
+      await deleteMessageMutation.mutateAsync({ messageId });
       setMessages((prev) => prev.filter((m) => m.id !== messageId));
     } catch (err) {
       console.error("Error deleting message:", err);

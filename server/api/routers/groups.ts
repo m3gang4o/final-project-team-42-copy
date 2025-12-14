@@ -1,7 +1,7 @@
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 import { Group } from "@/server/models/responses";
 import { db } from "@/server/db";
-import { eq, desc, ilike, or } from "drizzle-orm";
+import { eq, desc, ilike, or, and } from "drizzle-orm";
 import { groupsTable, membershipsTable } from "@/server/db/schema";
 import { NewGroup, UpdateGroup } from "@/server/models/inputs";
 import { Subject } from "@/server/models/auth";
@@ -184,6 +184,12 @@ const createGroup = protectedProcedure
         created_at: groupsTable.created_at,
       });
 
+    await db.insert(membershipsTable).values({
+      group_id: newGroup.id,
+      user_id: userId,
+      role: "owner",
+    });
+
     const fullGroup = await db.query.groupsTable.findFirst({
       where: eq(groupsTable.id, newGroup.id),
       columns: {
@@ -293,6 +299,124 @@ const deleteGroup = protectedProcedure
     await db.delete(groupsTable).where(eq(groupsTable.id, groupId));
   });
 
+const getGroups = protectedProcedure
+  .output(Group.array())
+  .query(async ({ ctx }) => {
+    const { subject } = ctx;
+    const userId = getUserIdFromSubject(subject);
+
+    const memberships = await db.query.membershipsTable.findMany({
+      where: eq(membershipsTable.user_id, userId),
+      with: {
+        group: {
+          columns: {
+            id: true,
+            name: true,
+            description: true,
+            owner_id: true,
+            is_private: true,
+            created_at: true,
+          },
+          with: {
+            owner: {
+              columns: {
+                id: true,
+                name: true,
+                email: true,
+                avatar_url: true,
+                created_at: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const groups = memberships
+      .map((m) => m.group)
+      .filter((g) => g !== null) as (typeof memberships)[0]["group"][];
+
+    return Group.array().parse(groups);
+  });
+
+const discoverGroups = protectedProcedure
+  .output(Group.array())
+  .query(async ({ ctx }) => {
+    const { subject } = ctx;
+    const userId = getUserIdFromSubject(subject);
+
+    const userMemberships = await db.query.membershipsTable.findMany({
+      where: eq(membershipsTable.user_id, userId),
+      columns: { group_id: true },
+    });
+
+    const userGroupIds = new Set(userMemberships.map((m) => m.group_id));
+
+    const allPublicGroups = await db.query.groupsTable.findMany({
+      where: eq(groupsTable.is_private, false),
+      orderBy: [desc(groupsTable.created_at)],
+      columns: {
+        id: true,
+        name: true,
+        description: true,
+        owner_id: true,
+        is_private: true,
+        created_at: true,
+      },
+      with: {
+        owner: {
+          columns: {
+            id: true,
+            name: true,
+            email: true,
+            avatar_url: true,
+            created_at: true,
+          },
+        },
+      },
+    });
+
+    const discoverableGroups = allPublicGroups.filter(
+      (g) => !userGroupIds.has(g.id),
+    );
+
+    return Group.array().parse(discoverableGroups);
+  });
+
+const joinGroup = protectedProcedure
+  .input(z.object({ groupId: z.number() }))
+  .mutation(async ({ ctx, input }) => {
+    const { subject } = ctx;
+    const { groupId } = input;
+    const userId = getUserIdFromSubject(subject);
+
+    const group = await db.query.groupsTable.findFirst({
+      where: eq(groupsTable.id, groupId),
+      columns: { id: true },
+    });
+
+    if (!group) {
+      throw new TRPCError({ code: "NOT_FOUND" });
+    }
+
+    const existing = await db.query.membershipsTable.findFirst({
+      where: and(
+        eq(membershipsTable.group_id, groupId),
+        eq(membershipsTable.user_id, userId),
+      ),
+      columns: { id: true },
+    });
+
+    if (existing) {
+      throw new TRPCError({ code: "BAD_REQUEST" });
+    }
+
+    await db.insert(membershipsTable).values({
+      group_id: groupId,
+      user_id: userId,
+    });
+  });
+
 export const groupsApiRouter = createTRPCRouter({
   getAllGroups: getAllGroups,
   getUserGroups: getUserGroups,
@@ -300,4 +424,7 @@ export const groupsApiRouter = createTRPCRouter({
   createGroup: createGroup,
   updateGroup: updateGroup,
   deleteGroup: deleteGroup,
+  getGroups: getGroups,
+  discoverGroups: discoverGroups,
+  joinGroup: joinGroup,
 });

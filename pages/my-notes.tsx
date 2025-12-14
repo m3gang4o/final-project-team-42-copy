@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import {
@@ -121,21 +121,21 @@ export default function MyNotesPage() {
   const { data: personalMessages = [], refetch: refetchPersonal } = api.messages.getMessages.useQuery({ groupId: null });
   
   // Fetch messages for each group - using useQueries would be better but this works
-  const group1Messages = userGroupsData[0] ? api.messages.getMessages.useQuery({ groupId: userGroupsData[0].id }) : { data: [] };
-  const group2Messages = userGroupsData[1] ? api.messages.getMessages.useQuery({ groupId: userGroupsData[1].id }) : { data: [] };
-  const group3Messages = userGroupsData[2] ? api.messages.getMessages.useQuery({ groupId: userGroupsData[2].id }) : { data: [] };
-  const group4Messages = userGroupsData[3] ? api.messages.getMessages.useQuery({ groupId: userGroupsData[3].id }) : { data: [] };
-  const group5Messages = userGroupsData[4] ? api.messages.getMessages.useQuery({ groupId: userGroupsData[4].id }) : { data: [] };
+  const group1Query = api.messages.getMessages.useQuery({ groupId: userGroupsData[0]?.id ?? -1 }, { enabled: !!userGroupsData[0] });
+  const group2Query = api.messages.getMessages.useQuery({ groupId: userGroupsData[1]?.id ?? -1 }, { enabled: !!userGroupsData[1] });
+  const group3Query = api.messages.getMessages.useQuery({ groupId: userGroupsData[2]?.id ?? -1 }, { enabled: !!userGroupsData[2] });
+  const group4Query = api.messages.getMessages.useQuery({ groupId: userGroupsData[3]?.id ?? -1 }, { enabled: !!userGroupsData[3] });
+  const group5Query = api.messages.getMessages.useQuery({ groupId: userGroupsData[4]?.id ?? -1 }, { enabled: !!userGroupsData[4] });
   
-  const allGroupMessages = [
-    ...(group1Messages.data || []),
-    ...(group2Messages.data || []),
-    ...(group3Messages.data || []),
-    ...(group4Messages.data || []),
-    ...(group5Messages.data || []),
-  ];
+  const groupMessagesQueries = [group1Query, group2Query, group3Query, group4Query, group5Query];
   
-  const groupMessagesQueries = [group1Messages, group2Messages, group3Messages, group4Messages, group5Messages].filter(q => q.data !== undefined);
+  const allGroupMessages = useMemo(() => [
+    ...(group1Query.data || []),
+    ...(group2Query.data || []),
+    ...(group3Query.data || []),
+    ...(group4Query.data || []),
+    ...(group5Query.data || []),
+  ], [group1Query.data, group2Query.data, group3Query.data, group4Query.data, group5Query.data]);
 
   useEffect(() => {
     if (currentUser) {
@@ -157,10 +157,16 @@ export default function MyNotesPage() {
     }
   }, [currentUser]);
 
-  useEffect(() => {
-    // Combine personal and group messages
+  const getFileType = (url: string | null): "pdf" | "image" | "text" | null => {
+    if (!url) return "text";
+    if (url.match(/\.pdf$/i)) return "pdf";
+    if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) return "image";
+    return null;
+  };
+
+  const formattedDocuments = useMemo(() => {
     const allMessages = [...personalMessages, ...allGroupMessages];
-    const formattedDocs: Document[] = allMessages.map((msg) => ({
+    const docs: Document[] = allMessages.map((msg) => ({
       id: msg.id,
       title: msg.message?.substring(0, 50) || "Untitled Document",
       message: msg.message,
@@ -170,21 +176,24 @@ export default function MyNotesPage() {
       createdAt: msg.createdAt,
       author: msg.author ? {
         name: msg.author.name,
-        avatarUrl: msg.author.avatarUrl,
+        avatarUrl: msg.author.avatarUrl ?? null,
       } : undefined,
       group: msg.group ? { name: msg.group.name } : undefined,
       file_type: getFileType(msg.attachmentUrl),
     }));
 
-    // Sort by created_at descending
-    formattedDocs.sort(
+    docs.sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
 
-    setDocuments(formattedDocs);
-    setLoading(false);
+    return docs;
   }, [personalMessages, allGroupMessages]);
+
+  useEffect(() => {
+    setDocuments(formattedDocuments);
+    setLoading(false);
+  }, [formattedDocuments]);
 
   useEffect(() => {
     const channel = supabase
@@ -194,28 +203,27 @@ export default function MyNotesPage() {
         { event: "*", schema: "public", table: "messages" },
         () => {
           refetchPersonal();
-          groupMessagesQueries.forEach(query => query.refetch());
         },
       )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [refetchPersonal, supabase]);
 
   useEffect(() => {
     const handleRouteChange = () => {
-      fetchDocuments();
+      refetchPersonal();
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        fetchDocuments();
+        refetchPersonal();
       }
     };
 
     const handleFocus = () => {
-      fetchDocuments();
+      refetchPersonal();
     };
 
     router.events.on("routeChangeComplete", handleRouteChange);
@@ -227,15 +235,7 @@ export default function MyNotesPage() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleFocus);
     };
-  }, [router]);
-
-
-  const getFileType = (url: string | null): "pdf" | "image" | "text" | null => {
-    if (!url) return "text";
-    if (url.match(/\.pdf$/i)) return "pdf";
-    if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) return "image";
-    return null;
-  };
+  }, [router, refetchPersonal]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -290,7 +290,6 @@ export default function MyNotesPage() {
       });
 
       if (!response.ok) {
-        // Clone the response so we can read it multiple times if needed
         const responseClone = response.clone();
         let errorMessage = "Upload failed";
         try {
@@ -439,8 +438,8 @@ export default function MyNotesPage() {
     );
   });
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatDate = (dateInput: string | Date) => {
+    const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);

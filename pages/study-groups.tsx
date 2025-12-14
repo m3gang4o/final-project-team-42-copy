@@ -176,9 +176,9 @@ export default function GroupsPage({ user }: GroupsPageProps) {
   });
 
   const joinByCodeMutation = api.memberships.joinGroup.useMutation({
-    onSuccess: async ({ groupId }) => {
+    onSuccess: async (membership) => {
       await utils.groups.getUserGroups.invalidate();
-      setSelectedGroupId(groupId);
+      setSelectedGroupId(membership.groupId);
 
       setJoinCode("");
       setIsJoinGroupOpen(false);
@@ -215,15 +215,22 @@ export default function GroupsPage({ user }: GroupsPageProps) {
     setErrorMessage(null);
 
     if (!joinCode.trim()) {
-      setErrorMessage("Enter a join code.");
+      setErrorMessage("Enter a group ID.");
       return;
     }
+    
+    const groupId = parseInt(joinCode.trim(), 10);
+    if (isNaN(groupId)) {
+      setErrorMessage("Please enter a valid group ID (number).");
+      return;
+    }
+    
     if (!user) {
       setErrorMessage("You must be logged in to join a group.");
       return;
     }
 
-    joinByCodeMutation.mutate({ joinCode: joinCode.trim().toUpperCase() });
+    joinByCodeMutation.mutate({ groupId });
   };
 
   const isSubmitting = createGroupMutation.isPending;
@@ -544,7 +551,7 @@ export default function GroupsPage({ user }: GroupsPageProps) {
             <DialogHeader>
               <DialogTitle>Join a group</DialogTitle>
               <DialogDescription>
-                Enter the join code shared with you to become a member.
+                Enter the group ID shared with you to become a member.
               </DialogDescription>
             </DialogHeader>
 
@@ -556,12 +563,12 @@ export default function GroupsPage({ user }: GroupsPageProps) {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="join-code">Join code *</Label>
+                <Label htmlFor="join-code">Group ID *</Label>
                 <Input
                   id="join-code"
-                  placeholder="e.g., ABC123"
+                  placeholder="e.g., 123"
                   value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  onChange={(e) => setJoinCode(e.target.value)}
                 />
               </div>
             </div>
