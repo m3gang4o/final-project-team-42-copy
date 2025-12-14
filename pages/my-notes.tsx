@@ -60,16 +60,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AIStudyHelper from "@/components/ai/AIStudyHelper";
 import { ModeToggle } from "@/components/theme/mode-toggle";
+import { api } from "@/utils/trpc/api";
 
 interface Document {
   id: number;
   title: string;
   message: string | null;
-  group_id: number | null;
-  author_id: number;
-  attachment_url: string | null;
-  created_at: string;
-  author?: { name: string; avatar_url: string | null };
+  groupId: number | null;
+  authorId: number;
+  attachmentUrl: string | null;
+  createdAt: Date;
+  author?: { name: string; avatarUrl: string | null };
   group?: { name: string };
   file_type?: "pdf" | "image" | "text" | null;
   file_size?: number;
@@ -112,15 +113,86 @@ export default function MyNotesPage() {
   const [isViewContentOpen, setIsViewContentOpen] = useState(false);
   const [documentToView, setDocumentToView] = useState<Document | null>(null);
 
+  const { data: currentUser } = api.users.getCurrentUser.useQuery();
+  const { data: userGroupsData = [] } = api.groups.getGroups.useQuery();
+  const { data: personalMessages = [], refetch: refetchPersonal } = api.messages.getMessages.useQuery({ groupId: null });
+  
+  // Fetch messages for each group - using useQueries would be better but this works
+  const group1Messages = userGroupsData[0] ? api.messages.getMessages.useQuery({ groupId: userGroupsData[0].id }) : { data: [] };
+  const group2Messages = userGroupsData[1] ? api.messages.getMessages.useQuery({ groupId: userGroupsData[1].id }) : { data: [] };
+  const group3Messages = userGroupsData[2] ? api.messages.getMessages.useQuery({ groupId: userGroupsData[2].id }) : { data: [] };
+  const group4Messages = userGroupsData[3] ? api.messages.getMessages.useQuery({ groupId: userGroupsData[3].id }) : { data: [] };
+  const group5Messages = userGroupsData[4] ? api.messages.getMessages.useQuery({ groupId: userGroupsData[4].id }) : { data: [] };
+  
+  const allGroupMessages = [
+    ...(group1Messages.data || []),
+    ...(group2Messages.data || []),
+    ...(group3Messages.data || []),
+    ...(group4Messages.data || []),
+    ...(group5Messages.data || []),
+  ];
+  
+  const groupMessagesQueries = [group1Messages, group2Messages, group3Messages, group4Messages, group5Messages].filter(q => q.data !== undefined);
+
   useEffect(() => {
-    fetchDocuments();
-    fetchUserGroups();
+    if (currentUser) {
+      setUserName(currentUser.name);
+      setUserEmail(currentUser.email);
+      // Handle avatar URL
+      if (currentUser.avatarUrl) {
+        if (currentUser.avatarUrl.startsWith("http")) {
+          setUserAvatarUrl(currentUser.avatarUrl);
+        } else {
+          const { data: { publicUrl } } = supabase.storage
+            .from("group-files")
+            .getPublicUrl(currentUser.avatarUrl);
+          setUserAvatarUrl(publicUrl);
+        }
+      } else {
+        setUserAvatarUrl(null);
+      }
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    // Combine personal and group messages
+    const allMessages = [...personalMessages, ...allGroupMessages];
+    const formattedDocs: Document[] = allMessages.map((msg) => ({
+      id: msg.id,
+      title: msg.message?.substring(0, 50) || "Untitled Document",
+      message: msg.message,
+      groupId: msg.groupId,
+      authorId: msg.authorId,
+      attachmentUrl: msg.attachmentUrl,
+      createdAt: msg.createdAt,
+      author: msg.author ? {
+        name: msg.author.name,
+        avatarUrl: msg.author.avatarUrl,
+      } : undefined,
+      group: msg.group ? { name: msg.group.name } : undefined,
+      file_type: getFileType(msg.attachmentUrl),
+    }));
+
+    // Sort by created_at descending
+    formattedDocs.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+
+    setDocuments(formattedDocs);
+    setLoading(false);
+  }, [personalMessages, allGroupMessages]);
+
+  useEffect(() => {
     const channel = supabase
       .channel("documents-changes")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "messages" },
-        () => fetchDocuments(),
+        () => {
+          refetchPersonal();
+          groupMessagesQueries.forEach(query => query.refetch());
+        },
       )
       .subscribe();
     return () => {
@@ -154,110 +226,6 @@ export default function MyNotesPage() {
     };
   }, [router]);
 
-  const fetchDocuments = async () => {
-    try {
-      // Get current user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        console.error("No user logged in");
-        setLoading(false);
-        return;
-      }
-
-      // Convert Supabase UUID to integer ID for database lookup
-      const userId = parseInt(user.id.substring(0, 8), 16);
-
-      // Fetch user profile data
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("name, email, avatar_url")
-        .eq("id", userId)
-        .single();
-
-      if (!userError && userData) {
-        setUserName(userData.name || "");
-        setUserEmail(userData.email || "");
-        // Handle avatar URL - check if it's a full URL or a path
-        if (userData.avatar_url) {
-          if (userData.avatar_url.startsWith("http")) {
-            // Already a full URL
-            setUserAvatarUrl(userData.avatar_url);
-          } else {
-            // It's a path, get the public URL from group-files bucket
-            const {
-              data: { publicUrl },
-            } = supabase.storage
-              .from("group-files")
-              .getPublicUrl(userData.avatar_url);
-            setUserAvatarUrl(publicUrl);
-          }
-        } else {
-          setUserAvatarUrl(null);
-        }
-      }
-
-      // Fetch personal notes (group_id is null) for the current user
-      const { data: personalNotes, error: personalError } = await supabase
-        .from("messages")
-        .select(
-          "*, author:users!messages_author_id_fkey(name, avatar_url), group:groups(name)",
-        )
-        .eq("author_id", userId)
-        .is("group_id", null)
-        .order("created_at", { ascending: false });
-
-      if (personalError) throw personalError;
-
-      // Fetch groups where user is a member
-      const { data: memberships, error: membershipError } = await supabase
-        .from("memberships")
-        .select("group_id")
-        .eq("user_id", userId);
-
-      if (membershipError) throw membershipError;
-
-      const userGroupIds = (memberships || []).map((m: any) => m.group_id);
-
-      // Fetch group notes from user's groups
-      let groupNotes: any[] = [];
-      if (userGroupIds.length > 0) {
-        const { data: groupData, error: groupError } = await supabase
-          .from("messages")
-          .select(
-            "*, author:users!messages_author_id_fkey(name, avatar_url), group:groups(name)",
-          )
-          .in("group_id", userGroupIds)
-          .not("group_id", "is", null)
-          .order("created_at", { ascending: false });
-
-        if (groupError) throw groupError;
-        groupNotes = groupData || [];
-      }
-
-      // Combine personal and group notes
-      const allNotes = [...(personalNotes || []), ...groupNotes];
-
-      const formattedDocs: Document[] = allNotes.map((doc: any) => ({
-        ...doc,
-        title: doc.message?.substring(0, 50) || "Untitled Document",
-        file_type: getFileType(doc.attachment_url),
-      }));
-
-      // Sort by created_at descending
-      formattedDocs.sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      );
-
-      setDocuments(formattedDocs);
-    } catch (error) {
-      console.error("Error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getFileType = (url: string | null): "pdf" | "image" | "text" | null => {
     if (!url) return "text";
@@ -350,6 +318,17 @@ export default function MyNotesPage() {
     }
   };
 
+  const sendMessageMutation = api.messages.sendMessage.useMutation({
+    onSuccess: () => {
+      refetchPersonal();
+      groupMessagesQueries.forEach(query => query.refetch());
+      setNewDoc({ title: "", message: "" });
+      setSelectedFile(null);
+      setFilePreview(null);
+      setIsNewDocOpen(false);
+    },
+  });
+
   const handleCreateDocument = async () => {
     if (!newDoc.title.trim() && !selectedFile) {
       alert("Enter a title or select a file");
@@ -357,19 +336,6 @@ export default function MyNotesPage() {
     }
     setUploading(true);
     try {
-      // Get current user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        alert("You must be logged in to create a note");
-        setUploading(false);
-        return;
-      }
-
-      // Convert Supabase UUID to integer ID for database lookup
-      const userId = parseInt(user.id.substring(0, 8), 16);
-
       let attachmentUrl = null;
       if (selectedFile) {
         attachmentUrl = await uploadFile(selectedFile);
@@ -378,18 +344,11 @@ export default function MyNotesPage() {
           return;
         }
       }
-      const { error } = await supabase.from("messages").insert({
+      await sendMessageMutation.mutateAsync({
+        groupId: null, // Personal document
         message: newDoc.title || selectedFile?.name || "Untitled",
-        attachment_url: attachmentUrl,
-        author_id: userId,
-        group_id: null, // Personal document
+        attachmentUrl: attachmentUrl,
       });
-      if (error) throw error;
-      setNewDoc({ title: "", message: "" });
-      setSelectedFile(null);
-      setFilePreview(null);
-      setIsNewDocOpen(false);
-      fetchDocuments();
     } catch (error) {
       console.error("Error:", error);
       alert("Failed to create document");
@@ -398,40 +357,26 @@ export default function MyNotesPage() {
     }
   };
 
-  const fetchUserGroups = async () => {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const userId = parseInt(user.id.substring(0, 8), 16);
-
-      // Fetch groups where user is a member
-      const { data, error } = await supabase
-        .from("memberships")
-        .select(
-          `
-          group_id,
-          groups (
-            id,
-            name,
-            description
-          )
-        `,
-        )
-        .eq("user_id", userId);
-
-      if (error) throw error;
-
-      const groups = (data || [])
-        .map((membership: any) => membership.groups)
-        .filter(Boolean);
-      setUserGroups(groups);
-    } catch (error) {
-      console.error("Error fetching groups:", error);
+  useEffect(() => {
+    if (userGroupsData) {
+      setUserGroups(userGroupsData.map(g => ({
+        id: g.id,
+        name: g.name,
+        description: g.description,
+      })));
     }
-  };
+  }, [userGroupsData]);
+
+  const shareMessageMutation = api.messages.sendMessage.useMutation({
+    onSuccess: () => {
+      refetchPersonal();
+      groupMessagesQueries.forEach(query => query.refetch());
+      alert("Note shared successfully!");
+      setIsShareDialogOpen(false);
+      setDocumentToShare(null);
+      setSelectedGroupId(null);
+    },
+  });
 
   const handleShareDocument = async () => {
     if (!documentToShare || !selectedGroupId) {
@@ -441,32 +386,11 @@ export default function MyNotesPage() {
 
     setSharing(true);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        alert("You must be logged in to share");
-        setSharing(false);
-        return;
-      }
-
-      const userId = parseInt(user.id.substring(0, 8), 16);
-
-      // Create a copy of the note in the selected group
-      const { error } = await supabase.from("messages").insert({
+      await shareMessageMutation.mutateAsync({
+        groupId: selectedGroupId,
         message: documentToShare.message,
-        attachment_url: documentToShare.attachment_url,
-        author_id: userId,
-        group_id: selectedGroupId,
+        attachmentUrl: documentToShare.attachmentUrl,
       });
-
-      if (error) throw error;
-
-      alert("Note shared successfully!");
-      setIsShareDialogOpen(false);
-      setDocumentToShare(null);
-      setSelectedGroupId(null);
-      fetchDocuments(); // Refresh the documents list to show the newly shared note
     } catch (error) {
       console.error("Error sharing document:", error);
       alert("Failed to share document");
@@ -475,12 +399,17 @@ export default function MyNotesPage() {
     }
   };
 
+  const deleteMessageMutation = api.messages.deleteMessage.useMutation({
+    onSuccess: () => {
+      refetchPersonal();
+      groupMessagesQueries.forEach(query => query.refetch());
+    },
+  });
+
   const handleDeleteDocument = async (id: number) => {
     if (!confirm("Are you sure you want to delete this document?")) return;
     try {
-      const { error } = await supabase.from("messages").delete().eq("id", id);
-      if (error) throw error;
-      fetchDocuments();
+      await deleteMessageMutation.mutateAsync({ messageId: id });
     } catch (error) {
       console.error("Error:", error);
       alert("Failed to delete document");
@@ -489,12 +418,12 @@ export default function MyNotesPage() {
 
   const filteredDocuments = documents.filter((doc) => {
     // Filter by type
-    if (filterType === "personal" && doc.group_id !== null) return false;
-    if (filterType === "shared" && doc.group_id === null) return false;
+    if (filterType === "personal" && doc.groupId !== null) return false;
+    if (filterType === "shared" && doc.groupId === null) return false;
     if (filterType === "recent") {
       const dayAgo = new Date();
       dayAgo.setDate(dayAgo.getDate() - 1);
-      if (new Date(doc.created_at) < dayAgo) return false;
+      if (new Date(doc.createdAt) < dayAgo) return false;
     }
 
     // Filter by search
@@ -841,10 +770,10 @@ export default function MyNotesPage() {
                                 <Eye className="mr-2 h-4 w-4" />
                                 View Content
                               </DropdownMenuItem>
-                              {doc.attachment_url && (
+                              {doc.attachmentUrl && (
                                 <DropdownMenuItem
                                   onClick={() =>
-                                    window.open(doc.attachment_url!, "_blank")
+                                    window.open(doc.attachmentUrl!, "_blank")
                                   }
                                 >
                                   <Download className="mr-2 h-4 w-4" />
@@ -872,10 +801,10 @@ export default function MyNotesPage() {
                           </DropdownMenu>
                         </div>
 
-                        {doc.attachment_url && doc.file_type === "image" && (
+                        {doc.attachmentUrl && doc.file_type === "image" && (
                           <div className="bg-muted mb-3 overflow-hidden rounded-lg">
                             <img
-                              src={doc.attachment_url}
+                              src={doc.attachmentUrl}
                               alt={`${doc.title} document`}
                               className="h-32 w-full object-cover"
                             />
@@ -892,7 +821,7 @@ export default function MyNotesPage() {
                           <div className="flex items-center gap-1">
                             <Avatar className="h-5 w-5">
                               <AvatarImage
-                                src={doc.author?.avatar_url || undefined}
+                                src={doc.author?.avatarUrl || undefined}
                               />
                               <AvatarFallback className="text-xs">
                                 {doc.author?.name?.charAt(0).toUpperCase() ||
@@ -903,7 +832,7 @@ export default function MyNotesPage() {
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            <span>{formatDate(doc.created_at)}</span>
+                            <span>{formatDate(doc.createdAt)}</span>
                           </div>
                         </div>
 
@@ -935,7 +864,7 @@ export default function MyNotesPage() {
                             </h3>
                             <div className="text-muted-foreground mt-1 flex items-center gap-4 text-xs">
                               <span>{doc.author?.name || "Unknown"}</span>
-                              <span>{formatDate(doc.created_at)}</span>
+                              <span>{formatDate(doc.createdAt)}</span>
                               {doc.group && (
                                 <span className="text-blue-600">
                                   {doc.group.name}
@@ -967,10 +896,10 @@ export default function MyNotesPage() {
                                 <Eye className="mr-2 h-4 w-4" />
                                 View Content
                               </DropdownMenuItem>
-                              {doc.attachment_url && (
+                              {doc.attachmentUrl && (
                                 <DropdownMenuItem
                                   onClick={() =>
-                                    window.open(doc.attachment_url!, "_blank")
+                                    window.open(doc.attachmentUrl!, "_blank")
                                   }
                                 >
                                   <Download className="mr-2 h-4 w-4" />
@@ -1181,8 +1110,8 @@ export default function MyNotesPage() {
                     `Created by ${documentToView.author.name}`}
                   {documentToView?.group?.name &&
                     ` • Shared in ${documentToView.group.name}`}
-                  {documentToView?.created_at &&
-                    ` • ${new Date(documentToView.created_at).toLocaleString()}`}
+                  {documentToView?.createdAt &&
+                    ` • ${new Date(documentToView.createdAt).toLocaleString()}`}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -1193,12 +1122,12 @@ export default function MyNotesPage() {
                     </p>
                   </div>
                 )}
-                {documentToView?.attachment_url && (
+                {documentToView?.attachmentUrl && (
                   <div className="space-y-2">
                     <Label>Attachment</Label>
                     {documentToView.file_type === "image" ? (
                       <img
-                        src={documentToView.attachment_url}
+                        src={documentToView.attachmentUrl}
                         alt={`${documentToView.title} document preview`}
                         className="w-full rounded-lg border"
                       />
@@ -1207,7 +1136,7 @@ export default function MyNotesPage() {
                         variant="outline"
                         className="w-full"
                         onClick={() =>
-                          window.open(documentToView.attachment_url!, "_blank")
+                          window.open(documentToView.attachmentUrl!, "_blank")
                         }
                       >
                         <Download className="mr-2 h-4 w-4" />
@@ -1218,7 +1147,7 @@ export default function MyNotesPage() {
                   </div>
                 )}
                 {!documentToView?.message &&
-                  !documentToView?.attachment_url && (
+                  !documentToView?.attachmentUrl && (
                     <p className="py-4 text-center text-sm text-gray-500">
                       No content available
                     </p>

@@ -25,6 +25,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
+import { api } from "@/utils/trpc/api";
 import { ModeToggle } from "@/components/theme/mode-toggle";
 import {
   Collapsible,
@@ -141,91 +142,52 @@ export default function DashboardPage() {
     return () => clearInterval(timer);
   }, []);
 
+  const { data: currentUser } = api.users.getCurrentUser.useQuery();
+  const { data: groupsData = [], refetch: refetchGroups } = api.groups.getGroups.useQuery();
+  const { data: discoverGroupsData = [] } = api.groups.discoverGroups.useQuery();
+  const createGroupMutation = api.groups.createGroup.useMutation({
+    onSuccess: () => {
+      refetchGroups();
+    },
+  });
+  const joinGroupMutation = api.groups.joinGroup.useMutation({
+    onSuccess: () => {
+      refetchGroups();
+    },
+  });
+  const deleteGroupMutation = api.groups.deleteGroup.useMutation({
+    onSuccess: () => {
+      refetchGroups();
+    },
+  });
+
   useEffect(() => {
-    fetchGroups();
-    fetchUser();
-    fetchDiscoverGroups();
+    if (currentUser) {
+      const userId = currentUser.id;
+      setCurrentUserId(userId);
+      setUserEmail(currentUser.email);
+      setUserName(currentUser.name || "User");
+      if (currentUser.avatarUrl) {
+        if (currentUser.avatarUrl.startsWith("http")) {
+          setUserAvatarUrl(currentUser.avatarUrl);
+        } else {
+          const { data: { publicUrl } } = supabase.storage
+            .from("group-files")
+            .getPublicUrl(currentUser.avatarUrl);
+          setUserAvatarUrl(publicUrl);
+        }
+      } else {
+        setUserAvatarUrl(null);
+      }
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
     fetchRecentActivities();
-    fetchTotalResources();
     calculateStudyStreak();
   }, []);
 
-  useEffect(() => {
-    const handleRouteChange = () => {
-      fetchUser();
-    };
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        fetchUser();
-      }
-    };
-
-    const handleFocus = () => {
-      fetchUser();
-    };
-
-    router.events.on("routeChangeComplete", handleRouteChange);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("focus", handleFocus);
-
-    return () => {
-      router.events.off("routeChangeComplete", handleRouteChange);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("focus", handleFocus);
-    };
-  }, [router]);
-
-  const fetchUser = async () => {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
-        setCurrentUserId(userId);
-        setUserEmail(user.email || "");
-
-        if (userId) {
-          const { data: dbUser, error: dbError } = await supabase
-            .from("users")
-            .select("name, avatar_url")
-            .eq("id", userId)
-            .single();
-
-          if (!dbError && dbUser) {
-            setUserName(
-              dbUser.name ||
-                user.user_metadata?.name ||
-                user.email?.split("@")[0] ||
-                "User",
-            );
-            if (dbUser.avatar_url) {
-              if (dbUser.avatar_url.startsWith("http")) {
-                setUserAvatarUrl(dbUser.avatar_url);
-              } else {
-                const {
-                  data: { publicUrl },
-                } = supabase.storage
-                  .from("group-files")
-                  .getPublicUrl(dbUser.avatar_url);
-                setUserAvatarUrl(publicUrl);
-              }
-            } else {
-              setUserAvatarUrl(null);
-            }
-          } else {
-            const name =
-              user.user_metadata?.name || user.email?.split("@")[0] || "User";
-            setUserName(name);
-            setUserAvatarUrl(null);
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching user:", error);
-    }
-  };
 
   const fetchGroups = async () => {
     try {
@@ -641,42 +603,15 @@ export default function DashboardPage() {
         });
       }
 
-      // Get current user ID
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
-
-      // Create the group
-      const { data: newGroup, error: groupError } = await supabase
-        .from("groups")
-        .insert({
-          name: `${course} - ${groupName}`,
-          description: description,
-          owner_id: userId,
-          is_private: false,
-        })
-        .select()
-        .single();
-
-      if (groupError) throw groupError;
-
-      // Automatically add the creator as a member
-      if (newGroup) {
-        const { error: membershipError } = await supabase
-          .from("memberships")
-          .insert({
-            user_id: userId,
-            group_id: newGroup.id,
-          });
-
-        if (membershipError) {
-          console.error("Error adding creator as member:", membershipError);
-        }
-      }
+      // Create the group using tRPC
+      await createGroupMutation.mutateAsync({
+        name: `${course} - ${groupName}`,
+        description: description,
+        isPrivate: false,
+      });
 
       // Refresh groups list
-      fetchGroups();
+      refetchGroups();
       fetchTotalResources();
 
       setIsCreateGroupOpen(false);
@@ -699,12 +634,6 @@ export default function DashboardPage() {
     }
 
     try {
-      // Get current user ID
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const userId = user?.id ? parseInt(user.id.substring(0, 8), 16) : 1;
-
       // Parse group ID from join code
       const groupId = parseInt(joinCode.trim());
 
@@ -713,50 +642,18 @@ export default function DashboardPage() {
         return;
       }
 
-      // Check if group exists
-      const { data: group, error: groupError } = await supabase
-        .from("groups")
-        .select("id, name")
-        .eq("id", groupId)
-        .single();
-
-      if (groupError || !group) {
-        alert("Group not found. Please check the group ID.");
-        return;
+      try {
+        await joinGroupMutation.mutateAsync({ groupId });
+        alert("Successfully joined the group!");
+        fetchRecentActivities();
+        fetchTotalResources();
+      } catch (error: any) {
+        if (error?.data?.code === "BAD_REQUEST") {
+          alert("You are already a member of this group!");
+        } else {
+          alert("Group not found. Please check the group ID.");
+        }
       }
-
-      // Check if user is already a member
-      const { data: existingMembership } = await supabase
-        .from("memberships")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("group_id", groupId)
-        .single();
-
-      if (existingMembership) {
-        alert("You are already a member of this group!");
-        setIsJoinGroupOpen(false);
-        setJoinCode("");
-        return;
-      }
-
-      // Add user as a member
-      const { error: membershipError } = await supabase
-        .from("memberships")
-        .insert({
-          user_id: userId,
-          group_id: groupId,
-        });
-
-      if (membershipError) throw membershipError;
-
-      alert(`Successfully joined "${group.name}"!`);
-
-      // Refresh groups list
-      fetchGroups();
-      fetchDiscoverGroups();
-      fetchRecentActivities();
-      fetchTotalResources();
 
       setIsJoinGroupOpen(false);
       setJoinCode("");
@@ -774,38 +671,9 @@ export default function DashboardPage() {
     try {
       const groupId = selectedGroupForDelete.id;
 
-      // Delete all memberships for this group
-      const { error: membershipError } = await supabase
-        .from("memberships")
-        .delete()
-        .eq("group_id", groupId);
-
-      if (membershipError) {
-        console.error("Error deleting memberships:", membershipError);
-        // Continue anyway - might be due to foreign key constraints
-      }
-
-      // Delete all messages for this group
-      const { error: messagesError } = await supabase
-        .from("messages")
-        .delete()
-        .eq("group_id", groupId);
-
-      if (messagesError) {
-        console.error("Error deleting messages:", messagesError);
-      }
-
-      // Delete the group itself
-      const { error: groupError } = await supabase
-        .from("groups")
-        .delete()
-        .eq("id", groupId);
-
-      if (groupError) throw groupError;
+      await deleteGroupMutation.mutateAsync({ groupId });
 
       // Refresh groups list
-      fetchGroups();
-      fetchDiscoverGroups();
       fetchRecentActivities();
       fetchTotalResources();
 

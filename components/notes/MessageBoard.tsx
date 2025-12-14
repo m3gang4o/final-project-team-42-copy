@@ -7,16 +7,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Upload, Send, File, Image as ImageIcon, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { api } from "@/utils/trpc/api";
 
 interface Message {
   id: number;
   message: string | null;
-  attachment_url: string | null;
-  created_at: string;
+  attachmentUrl: string | null;
+  createdAt: Date;
   author: {
     id: number;
     name: string;
-    avatar_url: string | null;
+    avatarUrl: string | null;
   };
 }
 
@@ -25,7 +26,6 @@ interface MessageBoardProps {
 }
 
 export function MessageBoard({ groupId }: MessageBoardProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -33,8 +33,22 @@ export function MessageBoard({ groupId }: MessageBoardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const supabase = createSupabaseComponentClient();
 
+  const { data: messages = [], refetch } = api.messages.getMessages.useQuery({
+    groupId,
+  });
+
+  const sendMessageMutation = api.messages.sendMessage.useMutation({
+    onSuccess: () => {
+      refetch();
+      setNewMessage("");
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    },
+  });
+
   useEffect(() => {
-    fetchMessages();
     subscribeToMessages();
   }, [groupId]);
 
@@ -43,14 +57,6 @@ export function MessageBoard({ groupId }: MessageBoardProps) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
-
-  const fetchMessages = async () => {
-    const response = await fetch(`/api/messages/${groupId}`);
-    if (response.ok) {
-      const data = await response.json();
-      setMessages(data);
-    }
-  };
 
   const subscribeToMessages = () => {
     const channel = supabase
@@ -63,14 +69,8 @@ export function MessageBoard({ groupId }: MessageBoardProps) {
           table: "messages",
           filter: `group_id=eq.${groupId}`,
         },
-        (payload) => {
-          if (payload.eventType === "INSERT") {
-            fetchMessages();
-          } else if (payload.eventType === "DELETE") {
-            setMessages((prev) =>
-              prev.filter((msg) => msg.id !== payload.old.id),
-            );
-          }
+        () => {
+          refetch();
         },
       )
       .subscribe();
@@ -137,24 +137,18 @@ export function MessageBoard({ groupId }: MessageBoardProps) {
       }
     }
 
-    const response = await fetch(`/api/messages/${groupId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    try {
+      await sendMessageMutation.mutateAsync({
+        groupId,
         message: newMessage.trim() || null,
-        attachment_url: attachmentUrl,
-      }),
-    });
-
-    if (response.ok) {
-      setNewMessage("");
-      setSelectedFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+        attachmentUrl: attachmentUrl,
+      });
+    } catch (error) {
+      console.error("Error sending message:", error);
+      alert("Failed to send message");
+    } finally {
+      setUploading(false);
     }
-
-    setUploading(false);
   };
 
   const isImage = (url: string) => {
@@ -172,7 +166,7 @@ export function MessageBoard({ groupId }: MessageBoardProps) {
           {messages.map((msg) => (
             <div key={msg.id} className="flex gap-3">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={msg.author.avatar_url || undefined} />
+                <AvatarImage src={msg.author.avatarUrl || undefined} />
                 <AvatarFallback>
                   {msg.author.name.charAt(0).toUpperCase()}
                 </AvatarFallback>
@@ -183,7 +177,7 @@ export function MessageBoard({ groupId }: MessageBoardProps) {
                     {msg.author.name}
                   </span>
                   <span className="text-muted-foreground text-xs">
-                    {new Date(msg.created_at).toLocaleString()}
+                    {new Date(msg.createdAt).toLocaleString()}
                   </span>
                 </div>
                 {msg.message && (
@@ -191,17 +185,17 @@ export function MessageBoard({ groupId }: MessageBoardProps) {
                     {msg.message}
                   </p>
                 )}
-                {msg.attachment_url && (
+                {msg.attachmentUrl && (
                   <div className="mt-2">
-                    {isImage(msg.attachment_url) ? (
+                    {isImage(msg.attachmentUrl) ? (
                       <img
-                        src={msg.attachment_url}
+                        src={msg.attachmentUrl}
                         alt="Attachment"
                         className="max-w-md rounded-lg border"
                       />
-                    ) : isPDF(msg.attachment_url) ? (
+                    ) : isPDF(msg.attachmentUrl) ? (
                       <a
-                        href={msg.attachment_url}
+                        href={msg.attachmentUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:bg-accent flex items-center gap-2 rounded-lg border p-3"
@@ -211,7 +205,7 @@ export function MessageBoard({ groupId }: MessageBoardProps) {
                       </a>
                     ) : (
                       <a
-                        href={msg.attachment_url}
+                        href={msg.attachmentUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:bg-accent flex items-center gap-2 rounded-lg border p-3"
@@ -278,9 +272,9 @@ export function MessageBoard({ groupId }: MessageBoardProps) {
               }
             }}
             className="min-h-[60px]"
-            disabled={uploading}
+            disabled={uploading || sendMessageMutation.isPending}
           />
-          <Button onClick={handleSend} disabled={uploading} size="icon">
+          <Button onClick={handleSend} disabled={uploading || sendMessageMutation.isPending} size="icon">
             <Send className="h-4 w-4" />
           </Button>
         </div>
